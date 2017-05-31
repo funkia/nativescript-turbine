@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "noEmitHelpers": true,
+        "outDir": "app/dist",
+        "lib": ["es6", "dom", "es2015.core", "es2015.promise", "es2015.iterable", "es2015.proxy", "es2016.array.include" ],
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "./node_modules/tns-core-modules/*",
+                "./node_modules/*"
+            ]
+        }
+    },
+    "exclude": [
+        "node_modules",
+        "platforms",
+        "**/*.aot.ts"
+    ]
+}

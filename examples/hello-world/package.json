@@ -1,0 +1,28 @@
+{
+  "description": "NativeScript Application",
+  "android": {
+    "v8Flags": "--expose_gc"
+  },
+  "nativescript": {
+    "main": "dist/app.js",
+    "id": "org.nativescript.HelloWorld2",
+    "tns-android": {
+      "version": "3.0.0"
+    }
+  },
+  "dependencies": {
+    "@funkia/hareactive": "0.0.31",
+    "@funkia/jabz": "0.0.22",
+    "nativescript-theme-core": "~1.0.2",
+    "tns-core-modules": "~3.0.0"
+  },
+  "devDependencies": {
+    "babel-traverse": "6.24.1",
+    "babel-types": "6.24.1",
+    "babylon": "6.17.1",
+    "lazy": "1.0.11",
+    "nativescript-dev-android-snapshot": "^0.*.*",
+    "nativescript-dev-typescript": "~0.4.0",
+    "typescript": "^2.4.0-dev.20170524"
+  }
+}

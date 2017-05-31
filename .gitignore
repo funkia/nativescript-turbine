@@ -1,0 +1,16 @@
+*.log
+bundle.js
+*.map
+node_modules/
+*~
+typings
+.tern-port
+.#*
+dist/
+generated/
+coverage/
+.vscode
+.awcache
+yarn.lock
+platforms
+package-lock.json

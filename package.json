@@ -1,0 +1,31 @@
+{
+  "name": "turbine-native",
+  "version": "0.0.1",
+  "description": "Using Turbine to create native mobile applications.",
+  "main": "dist/index.ts",
+  "scripts": {},
+  "peerDependencies": {
+    "@funkia/hareactive": "0.0.31"
+  },
+  "dependencies": {
+    "@funkia/jabz": "0.0.22",
+    "@funkia/turbine": "0.1.0"
+  },
+  "bugs": {
+    "url": "https://github.com/limemloh/turbine-native/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/limemloh/turbine-native.git"
+  },
+  "keywords": [
+    "pure",
+    "functional",
+    "framework",
+    "frp",
+    "functional reactive programming",
+    "typescript",
+    "native"
+  ],
+  "license": "MIT"
+}
