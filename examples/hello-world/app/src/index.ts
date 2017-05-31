@@ -20,19 +20,20 @@ function runComponent<A>(c: PageComp) {
 }
 
 class PageComp extends Component<{}, any> {
-  constructor() {
+  constructor(private content: Component<any, Page>) {
     super();
   }
   run(frame: Frame) {
     const p = new Page();
     p.backgroundColor = new Color("blue");
+    this.content.run(p);
     frame.navigate(() => p);
     return {};
   }
 }
 
-function page() {
-  return new PageComp();
+function page(content: Component<any, Page>) {
+  return new PageComp(content);
 };
 
 class BtnComp extends Component<{}, any> {
@@ -43,8 +44,7 @@ class BtnComp extends Component<{}, any> {
     console.log('Butn')
     const b = new Button();
     b.addEventListener("click", console.log);
-    b.text = "Her";//this.text;
-
+    b.text = this.text;//this.text;
     view.content = b;
     return {};
   }
@@ -54,7 +54,7 @@ function button(text: string) {
   return new BtnComp(text);
 }
 
-runComponent(page().chain((a) => button("Virker")));
+runComponent(page(button("virker")));
 
 /*
 const b = new Button();
