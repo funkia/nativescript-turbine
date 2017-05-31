@@ -1,9 +1,10 @@
-import { sequence, Monad, monad, go, fgo } from "@funkia/jabz";
+import { sequence, Monad, go, fgo } from "@funkia/jabz";
 import {
   Now,
   Behavior, observe, sinkBehavior, isBehavior,
   Stream, placeholder
 } from "@funkia/hareactive";
+import { monad } from "./monad";
 
 const supportsProxy = true;//"Proxy" in window;
 
