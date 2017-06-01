@@ -1,2 +1,2 @@
 export * from "./elements";
-export * from "./ui-wrapper";
+export * from "./ui-builder";

@@ -22,6 +22,7 @@
     "babylon": "6.17.1",
     "lazy": "1.0.11",
     "nativescript-dev-android-snapshot": "^0.*.*",
+    "nativescript-dev-babel": "^0.1.6",
     "nativescript-dev-typescript": "~0.4.0",
     "typescript": "^2.4.0-dev.20170524"
   }

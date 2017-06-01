@@ -1,17 +1,21 @@
 import { Color } from "color";
-import { runComponent, page, absoluteLayout, button } from "./turbine-native";
+import { stackLayout, button, page, runComponent, textField } from './turbine-native';
+import { go } from "@funkia/jabz";
 
 const view = page(
-  absoluteLayout({
+  stackLayout({
     style: {
       backgroundColor: new Color("green")
     }
-  },
-    button({
-      style: {
-        backgroundColor: new Color("blue")
-      }
-    }, "Tap here")
+  }, go(function*(){
+    const {tap} = yield button({style: { backgroundColor: new Color("blue")}}, "Tap here");
+
+    tap.mapTo("Tap").log();
+    yield button({style: { backgroundColor: new Color("blue")}}, "Tap here");
+    yield button({style: { backgroundColor: new Color("blue")}}, "Tap here");    
+    return {};
+  })
+    
   )
 )
 
