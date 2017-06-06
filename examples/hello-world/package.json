@@ -11,15 +11,16 @@
     }
   },
   "dependencies": {
-    "@funkia/hareactive": "0.0.31",
+    "@funkia/hareactive": "^0.1.0",
     "@funkia/jabz": "0.0.22",
+    "@funkia/turbine": "^0.1.0",
     "nativescript-theme-core": "~1.0.2",
-    "tns-core-modules": "~3.0.0"
+    "tns-core-modules": "^3.0.1"
   },
   "devDependencies": {
     "babel-traverse": "6.24.1",
     "babel-types": "6.24.1",
-    "babylon": "6.17.1",
+    "babylon": "^6.17.2",
     "lazy": "1.0.11",
     "nativescript-dev-android-snapshot": "^0.*.*",
     "nativescript-dev-babel": "^0.1.6",

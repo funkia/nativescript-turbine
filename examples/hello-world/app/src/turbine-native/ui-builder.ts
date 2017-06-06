@@ -9,27 +9,42 @@ import { Observable, EventData } from "data/observable";
 
 import { Component, isComponent } from './component';
 import { streamFromObservable } from "./hareactive-wrapper";
+import { sequence } from "@funkia/jabz";
 
 interface UIConstuctor<A> {
   new (): A
 }
 
 type Parent = Page | LayoutBase;
-type Child<A = {}> = Component<A, Parent> | Showable;
+interface ChildList extends Array<Child> {}
+type Child<A = {}> = ChildList | Component<A, Parent> | Showable;
 
 type Properties = {
   style?: Partial<Style>
 }
 
-function isShowable(obj: any): boolean {
-  return obj instanceof String || obj instanceof Number;
+function isShowable(obj: any): obj is Showable {
+  return typeof obj === "string" || typeof obj === "number"; 
+}
+
+function isChild(a: any): a is Child {
+  return isComponent(a) || isShowable(a) || Array.isArray(a);
+}
+
+function isParent(a: any): a is Parent {
+  return a instanceof Page || a instanceof LayoutBase;
+}
+
+function toComponent(c: any): Component<any, any> {
+  if (isComponent(c)) return c;
+  if (Array.isArray(c)) return sequence(Component, c.map(toComponent));
 }
 
 class UIViewElement <B, A extends View> extends Component<B, Parent> {
   constructor(
     private viewC: UIConstuctor<A>, 
     private props: Properties,
-    private child: Child<any>
+    private child?: Child<any>
   ) {
     super();
   }
@@ -43,15 +58,23 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
     }
 
     // add child
-    if (view instanceof TextBase) {
-      view.text = this.child.toString();
-    } else if ((view instanceof Page || view instanceof LayoutBase) && isComponent(this.child)) {
-      (<any>this.child).run(view);
-    } 
+    if (this.child !== undefined) {
+      if (view instanceof TextBase) {
+        if (isShowable(this.child)) {
+          view.text = this.child.toString();
+        } else {
+          throw "Child should be a Text or Number";
+        }
+      } else if (isParent(view) && isChild(this.child)) {
+        toComponent(<any>this.child).run(view);
+      } else {
+        throw "Unsupported child";
+      }
+    }
 
     // add ourself
     if (parent instanceof Page) {
-      parent.content = view;    
+      parent.content = view;
     } else {
       parent.addChild(view);
     }
@@ -66,6 +89,15 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
   }
 }
 
+
+
 export function uiViewElement<A extends View>(viewC: UIConstuctor<A>) {
-  return (props: Properties, child: Child<A>) => new UIViewElement(viewC, props, child);
+  function createUI(propsOrChild?: Properties, child?: Child<A>) {
+    if (child === undefined && isChild(propsOrChild)) {
+      return new UIViewElement(viewC, {}, propsOrChild);
+    } else {
+      return new UIViewElement(viewC, propsOrChild, child);
+    }
+  }
+  return createUI;
 }

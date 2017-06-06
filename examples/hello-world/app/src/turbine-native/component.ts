@@ -66,13 +66,6 @@ class ChainComponent<A, B, P> extends Component<B, P> {
   }
 }
 
-/** Run component and the now-computation inside 
-export function runComponent<A>(parent: Node | string, c: Child<A>): A {
-  if (typeof parent === "string") {
-    parent = document.querySelector(parent);
-  }
-  return toComponent(c).run(parent);
-}*/
 export function isComponent(c: any): c is Component<any> {
   return c instanceof Component;
 }
@@ -124,7 +117,7 @@ export function loop<A extends ReactivesObject, P = Node>(
   const f2 = isGeneratorFunction(f) ? fgo(f) : f;
   return new LoopComponent<A, P>(f2, placeholderNames);
 }
-
+/*
 function addErrorHandler(modelName: string, viewName: string, obj: any): any {
   if (modelName === "") { modelName = "anonymous"; }
   if (viewName === "") { viewName = "anonymous"; }

@@ -11,7 +11,6 @@ import { TextField } from "ui/text-field";
 
 import { uiViewElement } from "./ui-builder";
 import { Component } from "./component";
-import { start } from 'application';
 
 export const absoluteLayout = uiViewElement(AbsoluteLayout);
 export const dockLayout = uiViewElement(DockLayout);
@@ -25,7 +24,7 @@ export const textField = uiViewElement(TextField);
 export const button = uiViewElement(Button);
 
 
-class PageComp extends Component<{}, any> {
+export class PageComponent extends Component<{}, any> {
   constructor(private content: Component<any, Page>) {
     super();
   }
@@ -38,16 +37,6 @@ class PageComp extends Component<{}, any> {
 }
 
 export function page(content: Component<any, Page>) {
-  return new PageComp(content);
+  return new PageComponent(content);
 };
 
-export function runComponent<A>(c: PageComp) {
-  let pageFn;
-  const fakeframe = <Frame>{
-    navigate: function(fn: () => Page) {
-      pageFn = fn;
-    }
-  };
-  c.run(fakeframe);
-  start({create: pageFn});
-}
