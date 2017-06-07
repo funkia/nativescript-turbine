@@ -19,9 +19,22 @@ export const gridLayout = uiViewElement(GridLayout);
 export const stackLayout = uiViewElement(StackLayout);
 export const wrapLayout = uiViewElement(WrapLayout);
 
-export const textField = uiViewElement(TextField);
+export const textField = uiViewElement(TextField, {
+  behaviors: {
+    textValue: {
+      name: "text",
+      initial: ""
+    }
+  }
+});
 
-export const button = uiViewElement(Button);
+export const button = uiViewElement(Button, {
+  streams: {
+    tap: {
+      name: "tap"
+    }
+  }
+});
 
 export class PageComponent extends Component<{}, any> {
   constructor(private content: Component<any, Page>) {

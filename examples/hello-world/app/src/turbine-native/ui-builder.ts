@@ -10,8 +10,8 @@ import { Observable, EventData } from "data/observable";
 import { Component, isComponent } from './component';
 import { streamFromObservable, behaviorFromObservable, viewObserve } from "./hareactive-wrapper";
 import { isBehavior, Behavior } from "@funkia/hareactive";
-import { sequence } from "@funkia/jabz";
 import { Showable } from '@funkia/turbine';
+import { toComponent } from "./native";
 
 interface UIConstuctor<A> {
   new (): A
@@ -48,11 +48,6 @@ function isChild(a: any): a is Child {
 
 function isParent(a: any): a is Parent {
   return a instanceof Page || a instanceof LayoutBase;
-}
-
-function toComponent(c: any): Component<any, any> {
-  if (isComponent(c)) return c;
-  if (Array.isArray(c)) return sequence(Component, c.map(toComponent));
 }
 
 function id<A>(a: A): A {
@@ -105,7 +100,8 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
           throw "Child should be a Text, Number or a Behavior of them";
         }
       } else if (isParent(view) && isChild(this.child)) {
-        toComponent(<any>this.child).run(view);
+        const childOut = toComponent(<any>this.child).run(view);
+        Object.assign(output, childOut);
       } else {
         throw "Unsupported child";
       }
@@ -122,13 +118,19 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
   }
 }
 
-export function uiViewElement<A extends View>(viewC: UIConstuctor<A>) {
+export function uiViewElement<A extends View>(viewC: UIConstuctor<A>, defaultProps: Properties = {}) {
   function createUI(propsOrChild?: Properties, child?: Child<A>) {
     if (child === undefined && isChild(propsOrChild)) {
-      return new UIViewElement(viewC, {}, propsOrChild);
+      return new UIViewElement(viewC, defaultProps, propsOrChild);
     } else {
-      return new UIViewElement(viewC, propsOrChild, child);
+      return new UIViewElement(viewC, mergeProps(defaultProps, propsOrChild), child);
     }
   }
   return createUI;
 }
+
+function mergeProps(a: Properties, b: Properties): Properties {
+  // TODO: more intelligent
+  return Object.assign({}, a, b);
+}
+
