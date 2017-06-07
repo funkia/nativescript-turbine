@@ -1,7 +1,7 @@
 import { Showable } from '@funkia/turbine';
 import { producerStream, Stream, producerBehavior, Behavior } from "@funkia/hareactive";
 import { Observable, EventData } from "data/observable";
-import { addCallback, removeCallback } from "fps-meter";
+import { FPSCallback } from "fps-meter/fps-native";
 import { View } from "ui/core/view";
 
 
@@ -35,21 +35,20 @@ export function behaviorFromObservable<A>(observable: any, property: string, ini
 }
 
 export function viewObserve<A extends Showable>(update: (a: A) => void, behavior: Behavior<A>) {
-  let callbackId;
-  let lastVal;
+  let lastVal;  
+  let fps = new FPSCallback(
+    () => {
+      const newVal = behavior.pull();
+      if (lastVal !== newVal) {
+        lastVal = newVal;
+        update(newVal);
+      }
+    }
+  );
+
   behavior.observe(
     update,
-    () => {
-      callbackId = addCallback(() => {
-        const newVal = behavior.pull();
-        if (lastVal !== newVal) {
-          lastVal = newVal;
-          update(newVal);
-        }
-      })
-    },
-    () => {
-      removeCallback(callbackId);
-    }
+    () => fps.start(),
+    () => fps.stop()
   );
 }
