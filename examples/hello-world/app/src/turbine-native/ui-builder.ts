@@ -1,3 +1,4 @@
+import { ActionDefinitions } from '@funkia/turbine/dist/defs/dom-builder';
 import { View } from "ui/core/view";
 import { Page } from "ui/page";
 import { Style } from "ui/styling/style";
@@ -7,7 +8,8 @@ import { Frame } from "ui/frame";
 import { Observable, EventData } from "data/observable";
 
 import { Component, isComponent } from './component';
-import { streamFromObservable, behaviorFromObservable } from "./hareactive-wrapper";
+import { streamFromObservable, behaviorFromObservable, viewObserve } from "./hareactive-wrapper";
+import { isBehavior, Behavior } from "@funkia/hareactive";
 import { sequence } from "@funkia/jabz";
 import { Showable } from '@funkia/turbine';
 
@@ -17,7 +19,7 @@ interface UIConstuctor<A> {
 
 type Parent = Page | LayoutBase;
 interface ChildList extends Array<Child> {}
-type Child<A = {}> = ChildList | Component<A, Parent> | Showable;
+type Child<A = {}> = ChildList | Component<A, Parent> | Showable | Behavior<Showable>;
 
 type StreamDescription<B> = {
   name: string,
@@ -41,7 +43,7 @@ function isShowable(obj: any): obj is Showable {
 }
 
 function isChild(a: any): a is Child {
-  return isComponent(a) || isShowable(a) || Array.isArray(a);
+  return isComponent(a) || isShowable(a) || Array.isArray(a) || isBehavior(a);
 }
 
 function isParent(a: any): a is Parent {
@@ -73,7 +75,7 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
         view.style.set(key, this.props.style[key]);
       })
     }
-    
+
     // output
     let output: any = {};
     if ("streams" in this.props) {
@@ -97,8 +99,10 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
       if (view instanceof TextBase) {
         if (isShowable(this.child)) {
           view.set("text", this.child.toString());
+        } else if (isBehavior(this.child)) {
+          viewObserve((a) => view.set("text", a.toString()), this.child)
         } else {
-          throw "Child should be a Text or Number";
+          throw "Child should be a Text, Number or a Behavior of them";
         }
       } else if (isParent(view) && isChild(this.child)) {
         toComponent(<any>this.child).run(view);

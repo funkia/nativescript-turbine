@@ -9,7 +9,7 @@ const textF = textField({
       initial: ""
     }
   }
-}, "Username");
+}, "");
 
 const btn = button({
   streams: {
@@ -22,11 +22,7 @@ const btn = button({
 const view = page(
   stackLayout(
     textF.chain(({textValue}) => {
-      textValue.subscribe((a) => console.log(a));
-      return btn.chain(({tap}) => {
-        tap.log()
-        return Component.of({});
-      });
+      return button(textValue);
     })
   )
 );
