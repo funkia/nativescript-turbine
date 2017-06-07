@@ -1,4 +1,3 @@
-import { Showable } from '@funkia/turbine';
 import { View } from "ui/core/view";
 import { Page } from "ui/page";
 import { Style } from "ui/styling/style";
@@ -8,8 +7,9 @@ import { Frame } from "ui/frame";
 import { Observable, EventData } from "data/observable";
 
 import { Component, isComponent } from './component';
-import { streamFromObservable } from "./hareactive-wrapper";
+import { streamFromObservable, behaviorFromObservable } from "./hareactive-wrapper";
 import { sequence } from "@funkia/jabz";
+import { Showable } from '@funkia/turbine';
 
 interface UIConstuctor<A> {
   new (): A
@@ -19,8 +19,21 @@ type Parent = Page | LayoutBase;
 interface ChildList extends Array<Child> {}
 type Child<A = {}> = ChildList | Component<A, Parent> | Showable;
 
+type StreamDescription<B> = {
+  name: string,
+  extractor?: (a: any) => B
+};
+
+type BehaviorDescription<B> = {
+  name: string,
+  initial: B,
+  extractor?: (a: any) => B,
+};
+
 type Properties = {
-  style?: Partial<Style>
+  style?: Partial<Style>,
+  streams?: Record<string, StreamDescription<any>>,
+  behaviors?: Record<string, BehaviorDescription<any>>
 }
 
 function isShowable(obj: any): obj is Showable {
@@ -40,6 +53,10 @@ function toComponent(c: any): Component<any, any> {
   if (Array.isArray(c)) return sequence(Component, c.map(toComponent));
 }
 
+function id<A>(a: A): A {
+  return a;
+}
+
 class UIViewElement <B, A extends View> extends Component<B, Parent> {
   constructor(
     private viewC: UIConstuctor<A>, 
@@ -56,12 +73,30 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
         view.style.set(key, this.props.style[key]);
       })
     }
+    
+    // output
+    let output: any = {};
+    if ("streams" in this.props) {
+      Object.keys(this.props.streams).reduce((out, key) => {
+        const {name, extractor = id} = this.props.streams[key];
+        out[key] = streamFromObservable(view, name, extractor);
+        return out;
+      }, output);
+    }
+    
+    if ("behaviors" in this.props) {
+      Object.keys(this.props.behaviors).reduce((out, key) => {
+        const {name, extractor = id, initial} = this.props.behaviors[key];
+        out[key] = behaviorFromObservable(view, name, initial, extractor);
+        return out;
+      }, output);
+    }
 
     // add child
     if (this.child !== undefined) {
       if (view instanceof TextBase) {
         if (isShowable(this.child)) {
-          view.text = this.child.toString();
+          view.set("text", this.child.toString());
         } else {
           throw "Child should be a Text or Number";
         }
@@ -78,18 +113,10 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
     } else {
       parent.addChild(view);
     }
-
-    // output
-    let output: any = {};
-    if (view instanceof Observable) {
-      output.tap = streamFromObservable(view, "tap");
-    }
     
     return output;
   }
 }
-
-
 
 export function uiViewElement<A extends View>(viewC: UIConstuctor<A>) {
   function createUI(propsOrChild?: Properties, child?: Child<A>) {

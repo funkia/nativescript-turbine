@@ -23,7 +23,6 @@ export const textField = uiViewElement(TextField);
 
 export const button = uiViewElement(Button);
 
-
 export class PageComponent extends Component<{}, any> {
   constructor(private content: Component<any, Page>) {
     super();
