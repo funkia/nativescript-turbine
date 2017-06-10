@@ -1,13 +1,13 @@
 import { Showable } from '@funkia/turbine';
 import { producerStream, Stream, producerBehavior, Behavior } from "@funkia/hareactive";
-import { Observable, EventData } from "data/observable";
-import { FPSCallback } from "fps-meter/fps-native";
-import { View } from "ui/core/view";
+import { Observable, EventData } from "tns-core-modules/data/observable";
+import { FPSCallback } from "tns-core-modules/fps-meter/fps-native";
+import { View } from "tns-core-modules/ui/core/view";
 
 
 export function streamFromObservable<A>(observable: Observable, event: string, extractor: (a: EventData) => A): Stream<A> {
   return producerStream<A>(push => {
-    const handler = (e) => {
+    const handler = (e: any) => {
       push(extractor(e.value));
     };
     observable.on(event, handler);
@@ -24,7 +24,7 @@ export function behaviorFromObservable<A>(observable: any, property: string, ini
   }, model);
 
   return producerBehavior<A>(push => {
-    const handler = (e) => {
+    const handler = (e: any) => {
       if (property === e.propertyName) {
         push(extractor(e.value));
       }
@@ -35,7 +35,7 @@ export function behaviorFromObservable<A>(observable: any, property: string, ini
 }
 
 export function viewObserve<A extends Showable>(update: (a: A) => void, behavior: Behavior<A>) {
-  let lastVal;  
+  let lastVal: A;
   let fps = new FPSCallback(
     () => {
       const newVal = behavior.pull();

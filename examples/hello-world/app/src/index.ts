@@ -1,16 +1,15 @@
-import { TextField } from "ui/text-field";
-import { runComponent, elements, Component } from './turbine-native';
+import { runComponent, elements, Component, loop, modelView } from "../../../../src";
+
 const { stackLayout, button, page, textField } = elements;
+import { Now } from "@funkia/hareactive";
 
-const view = page(
-  stackLayout(
-    textField().chain(({textValue}) => {
-      return button(textValue);
-    })
-  )
-);
+const login = loop(({textValue}) => stackLayout([
+  textField(),
+  button(textValue)
+]));
 
-runComponent(view);
+const view = page(login);
 
+const c = modelView(({}) => Now.of({}), ({}) => view)();
 
-
+runComponent(c);

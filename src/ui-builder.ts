@@ -1,11 +1,10 @@
-import { ActionDefinitions } from '@funkia/turbine/dist/defs/dom-builder';
-import { View } from "ui/core/view";
-import { Page } from "ui/page";
-import { Style } from "ui/styling/style";
-import { LayoutBase } from "ui/layouts/layout-base";
-import { TextBase } from "ui/text-base";
-import { Frame } from "ui/frame";
-import { Observable, EventData } from "data/observable";
+import { View } from "tns-core-modules/ui/core/view";
+import { Page } from "tns-core-modules/ui/page";
+import { Style } from "tns-core-modules/ui/styling/style";
+import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
+import { TextBase } from "tns-core-modules/ui/text-base";
+import { Frame } from "tns-core-modules/ui/frame";
+import { Observable, EventData } from "tns-core-modules/data/observable";
 
 import { Component, isComponent } from './component';
 import { streamFromObservable, behaviorFromObservable, viewObserve } from "./hareactive-wrapper";
@@ -119,7 +118,7 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
 }
 
 export function uiViewElement<A extends View>(viewC: UIConstuctor<A>, defaultProps: Properties = {}) {
-  function createUI(propsOrChild?: Properties, child?: Child<A>) {
+  function createUI(propsOrChild?: Properties, child?: Child<A>): Component<any, any> {
     if (child === undefined && isChild(propsOrChild)) {
       return new UIViewElement(viewC, defaultProps, propsOrChild);
     } else {

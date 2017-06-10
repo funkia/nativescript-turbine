@@ -1,10 +1,11 @@
-import { sequence, Monad, go, fgo } from "@funkia/jabz";
+import { sequence, Monad } from "@funkia/jabz";
 import {
   Now,
   Behavior, observe, sinkBehavior, isBehavior,
   Stream, placeholder
 } from "@funkia/hareactive";
 import { monad } from "./monad";
+import { toComponent } from "./native";
 
 const supportsProxy = true;//"Proxy" in window;
 
@@ -69,7 +70,7 @@ class ChainComponent<A, B, P> extends Component<B, P> {
 export function isComponent(c: any): c is Component<any> {
   return c instanceof Component;
 }
-/*
+
 export interface ReactivesObject {
   [a: string]: Behavior<any> | Stream<any>;
 }
@@ -110,14 +111,14 @@ class LoopComponent<A, P> extends Component<A, P> {
     return result;
   }
 }
-export function loop<A extends ReactivesObject, P = Node>(
+export function loop<A extends ReactivesObject, P>(
   f: ((a: A) => Component<A, P>) | ((a: A) => IterableIterator<Component<any> | A>),
   placeholderNames?: string[]
 ): Component<A, P> {
   const f2 = isGeneratorFunction(f) ? fgo(f) : f;
   return new LoopComponent<A, P>(f2, placeholderNames);
 }
-/*
+
 function addErrorHandler(modelName: string, viewName: string, obj: any): any {
   if (modelName === "") { modelName = "anonymous"; }
   if (viewName === "") { viewName = "anonymous"; }
@@ -135,7 +136,7 @@ function addErrorHandler(modelName: string, viewName: string, obj: any): any {
     }
   });
 }
-/*
+
 class ModelViewComponent<A> extends Component<A> {
   constructor(
     private args: any[],
@@ -188,7 +189,7 @@ export function modelView<M extends ReactivesObject, V>(
   const v: any = isGeneratorFunction<any, any>(view) ? fgo(view) : (...as: any[]) => toComponent(view(...as));
   return (...args: any[]) => new ModelViewComponent<M>(args, m, v, toViewReactiveNames);
 }
-
+/*
 export function viewObserve<A>(update: (a: A) => void, behavior: Behavior<A>): void {
   let isPulling = false;
   observe(

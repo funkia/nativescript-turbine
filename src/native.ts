@@ -1,9 +1,9 @@
 import { sequence } from "@funkia/jabz";
 import { PageComponent } from "./elements";
-import { Page } from "ui/page";
-import { Frame } from "ui/frame";
-import { start } from 'application';
-import { Component, isComponent } from './component';
+import { Page } from "tns-core-modules/ui/page";
+import { Frame } from "tns-core-modules/ui/frame";
+import { start } from "tns-core-modules/application";
+import { Component, isComponent } from "./component";
 
 export function runComponent<A>(c: PageComponent) {
   let pageFn;
@@ -18,5 +18,5 @@ export function runComponent<A>(c: PageComponent) {
 
 export function toComponent(c: any): Component<any, any> {
   if (isComponent(c)) return c;
-  if (Array.isArray(c)) return sequence(Component, c.map(toComponent));
+  if (Array.isArray(c)) return sequence(Component, c.map(toComponent)).map((res: any[]) => res.reduce(Object.assign, {}));
 }
