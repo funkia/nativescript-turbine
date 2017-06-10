@@ -1,4 +1,4 @@
-# Turbine-Native
+# NativeScript-Turbine
 Experimental
 
 Creating mobile-apps using Turbine in NativeScript

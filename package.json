@@ -1,5 +1,5 @@
 {
-  "name": "turbine-native",
+  "name": "nativescript-turbine",
   "version": "0.0.1",
   "description": "Using Turbine to create native mobile applications.",
   "main": "dist/index.ts",
@@ -13,11 +13,11 @@
     "tns-core-modules": "^3.0.1"
   },
   "bugs": {
-    "url": "https://github.com/limemloh/turbine-native/issues"
+    "url": "https://github.com/limemloh/nativescript-turbine/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/limemloh/turbine-native.git"
+    "url": "git+https://github.com/limemloh/nativescript-turbine.git"
   },
   "keywords": [
     "pure",
