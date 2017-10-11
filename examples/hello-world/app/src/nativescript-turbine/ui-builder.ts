@@ -1,24 +1,22 @@
-import { View } from "tns-core-modules/ui/core/view";
-import { Page } from "tns-core-modules/ui/page";
-import { Style } from "tns-core-modules/ui/styling/style";
-import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
-import { TextBase } from "tns-core-modules/ui/text-base";
-import { Frame } from "tns-core-modules/ui/frame";
-import { Observable, EventData } from "tns-core-modules/data/observable";
+import { View } from "ui/core/view";
+import { Page } from "ui/page";
+import { Style } from "ui/styling/style";
+import { LayoutBase } from "ui/layouts/layout-base";
+import { TextBase } from "ui/text-base";
+import { Frame } from "ui/frame";
 
-import { Component, isComponent } from './component';
+import { Component, isComponent, Showable } from './component';
 import { streamFromObservable, behaviorFromObservable, viewObserve } from "./hareactive-wrapper";
-import { isBehavior, Behavior } from "@funkia/hareactive";
-import { Showable } from '@funkia/turbine';
+import { isBehavior, Behavior } from "../hareactive";
 import { toComponent } from "./native";
 
-interface UIConstuctor<A> {
-  new (): A
+interface UIConstructor<A> {
+  new(): A
 }
 
 type Parent = Page | LayoutBase;
-interface ChildList extends Array<Child> {}
-type Child<A = {}> = ChildList | Component<A, Parent> | Showable | Behavior<Showable>;
+interface ChildList extends Array<Child> { }
+export type Child<A = {}> = ChildList | Component<A, Parent> | Showable | Behavior<Showable>;
 
 type StreamDescription<B> = {
   name: string,
@@ -32,13 +30,14 @@ type BehaviorDescription<B> = {
 };
 
 type Properties = {
-  style?: Partial<Style>,
+  style?: Partial<Style | Record<string, string>>,
   streams?: Record<string, StreamDescription<any>>,
-  behaviors?: Record<string, BehaviorDescription<any>>
+  behaviors?: Record<string, BehaviorDescription<any>>,
+  props?: Record<string, any>
 }
 
 function isShowable(obj: any): obj is Showable {
-  return typeof obj === "string" || typeof obj === "number"; 
+  return typeof obj === "string" || typeof obj === "number";
 }
 
 function isChild(a: any): a is Child {
@@ -53,9 +52,9 @@ function id<A>(a: A): A {
   return a;
 }
 
-class UIViewElement <B, A extends View> extends Component<B, Parent> {
+class UIViewElement<B, A extends View> extends Component<B, Parent> {
   constructor(
-    private viewC: UIConstuctor<A>, 
+    private viewC: UIConstructor<A>,
     private props: Properties,
     private child?: Child<any>
   ) {
@@ -63,29 +62,43 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
   }
   run(parent: Parent): B {
     const view = new this.viewC();
-    
+
     if ("style" in this.props) {
       Object.keys(this.props.style).forEach(key => {
         view.style.set(key, this.props.style[key]);
       })
     }
 
+    if ("props" in this.props) {
+      Object.keys(this.props.props).forEach(key => {
+        view.set(key, this.props[key]);
+      });
+    }
+
     // output
     let output: any = {};
     if ("streams" in this.props) {
       Object.keys(this.props.streams).reduce((out, key) => {
-        const {name, extractor = id} = this.props.streams[key];
+        const { name, extractor = id } = this.props.streams[key];
         out[key] = streamFromObservable(view, name, extractor);
         return out;
       }, output);
     }
-    
+
     if ("behaviors" in this.props) {
       Object.keys(this.props.behaviors).reduce((out, key) => {
-        const {name, extractor = id, initial} = this.props.behaviors[key];
+        const { name, extractor = id, initial } = this.props.behaviors[key];
         out[key] = behaviorFromObservable(view, name, initial, extractor);
         return out;
       }, output);
+    }
+
+
+    // add ourself
+    if (parent instanceof Page) {
+      parent.content = view;
+    } else {
+      parent.addChild(view);
     }
 
     // add child
@@ -106,23 +119,19 @@ class UIViewElement <B, A extends View> extends Component<B, Parent> {
       }
     }
 
-    // add ourself
-    if (parent instanceof Page) {
-      parent.content = view;
-    } else {
-      parent.addChild(view);
-    }
-    
     return output;
   }
 }
 
-export function uiViewElement<A extends View>(viewC: UIConstuctor<A>, defaultProps: Properties = {}) {
-  function createUI(propsOrChild?: Properties, child?: Child<A>): Component<any, any> {
+export function uiViewElement<A extends View>(viewC: UIConstructor<A>, defaultProps: Properties = {}) {
+  function createUI();
+  function createUI(child: Child<A>);
+  function createUI(propsOrChild: Properties);
+  function createUI(propsOrChild?: Properties | Child<A>, child?: Child<A>): Component<any, any> {
     if (child === undefined && isChild(propsOrChild)) {
       return new UIViewElement(viewC, defaultProps, propsOrChild);
     } else {
-      return new UIViewElement(viewC, mergeProps(defaultProps, propsOrChild), child);
+      return new UIViewElement(viewC, mergeProps(defaultProps, <Properties>propsOrChild), child);
     }
   }
   return createUI;

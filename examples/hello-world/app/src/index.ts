@@ -1,15 +1,16 @@
-import { runComponent, elements, Component, loop, modelView } from "../../../../src";
+import { runComponent, modelView, elements } from "./nativescript-turbine";
+const { page, button, stackLayout, textField, label } = elements;
 
-const { stackLayout, button, page, textField } = elements;
-import { Now } from "@funkia/hareactive";
-
-const login = loop(({textValue}) => stackLayout([
+const login = stackLayout([
+  label("Brugernavn"),
   textField(),
-  button(textValue)
-]));
+  label("Kode"),
+  textField({ props: { secure: true } }),
+  button("Login")
+]);
 
-const view = page(login);
+const p = page(login);
 
-const c = modelView(({}) => Now.of({}), ({}) => view)();
+runComponent(p);
 
-runComponent(c);
+

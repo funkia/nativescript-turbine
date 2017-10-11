@@ -17,6 +17,7 @@
       "es2016.array.include"
     ],
     "baseUrl": ".",
+    "noStrictGenericChecks": true,
     "paths": {
       "*": [
         "./node_modules/tns-core-modules/*",

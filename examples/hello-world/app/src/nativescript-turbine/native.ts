@@ -1,19 +1,20 @@
-import { sequence } from "@funkia/jabz";
+//import { sequence } from "@funkia/jabz";
 import { PageComponent } from "./elements";
-import { Page } from "tns-core-modules/ui/page";
-import { Frame } from "tns-core-modules/ui/frame";
-import { start } from "tns-core-modules/application";
+import { Page } from "ui/page";
+import { Frame } from "ui/frame";
+import { start } from "application";
 import { Component, isComponent } from "./component";
+import { sequence } from "../jabz";
 
 export function runComponent<A>(c: PageComponent) {
   let pageFn;
   const fakeframe = <Frame>{
-    navigate: function(fn: () => Page) {
+    navigate: function (fn: () => Page) {
       pageFn = fn;
     }
   };
   c.run(fakeframe);
-  start({create: pageFn});
+  start({ create: pageFn });
 }
 
 export function toComponent(c: any): Component<any, any> {

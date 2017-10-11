@@ -1,8 +1,8 @@
 import { Showable } from '@funkia/turbine';
-import { producerStream, Stream, producerBehavior, Behavior } from "@funkia/hareactive";
-import { Observable, EventData } from "tns-core-modules/data/observable";
-import { FPSCallback } from "tns-core-modules/fps-meter/fps-native";
-import { View } from "tns-core-modules/ui/core/view";
+import { producerStream, Stream, producerBehavior, Behavior } from "../hareactive";
+import { Observable, EventData } from "data/observable";
+import { FPSCallback } from "fps-meter/fps-native";
+import { View } from "ui/core/view";
 
 
 export function streamFromObservable<A>(observable: Observable, event: string, extractor: (a: EventData) => A): Stream<A> {

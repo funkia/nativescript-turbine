@@ -1,12 +1,8 @@
-import { sequence, Monad } from "@funkia/jabz";
-import {
-  Now,
-  Behavior, observe, sinkBehavior, isBehavior,
-  Stream, placeholder
-} from "@funkia/hareactive";
-import { monad } from "./monad";
+//import { Monad } from "@funkia/jabz";
+import { Now, Behavior, Stream, placeholder } from "../hareactive";
+import { Monad, monad, fgo } from "../jabz"
 import { toComponent } from "./native";
-
+import { Child } from "./ui-builder";
 const supportsProxy = true;//"Proxy" in window;
 
 export type Showable = string | number;
