@@ -2,7 +2,7 @@
   "name": "nativescript-turbine",
   "version": "0.0.1",
   "description": "Using Turbine to create native mobile applications.",
-  "main": "dist/index.ts",
+  "main": "dist/index.js",
   "scripts": {},
   "peerDependencies": {
     "@funkia/hareactive": "0.0.31"
@@ -12,6 +12,7 @@
     "@funkia/turbine": "0.1.0",
     "tns-core-modules": "^3.0.1"
   },
+  "files": ["dist"],
   "bugs": {
     "url": "https://github.com/limemloh/nativescript-turbine/issues"
   },
