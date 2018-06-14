@@ -18,11 +18,11 @@
     "dist"
   ],
   "bugs": {
-    "url": "https://github.com/limemloh/nativescript-turbine/issues"
+    "url": "https://github.com/funkia/nativescript-turbine/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/limemloh/nativescript-turbine.git"
+    "url": "git+https://github.com/funkia/nativescript-turbine.git"
   },
   "keywords": [
     "pure",

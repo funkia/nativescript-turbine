@@ -1,4 +1,4 @@
-﻿import { runComponent, elements as e } from "nativescript-turbine";
+﻿import { runComponent, elements as e, modelView } from "nativescript-turbine";
 
 const login = e.stackLayout(
   {
@@ -7,7 +7,7 @@ const login = e.stackLayout(
     }
   },
   [
-    e.label("Username"),
+    e.label("Usernamse"),
     e.textField(),
     e.label("Password"),
     e.textField({ props: { secure: true } }),
