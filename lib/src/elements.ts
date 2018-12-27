@@ -11,7 +11,8 @@ import { TextField } from "ui/text-field";
 import { Label } from "ui/label";
 
 import { uiViewElement } from "./ui-builder";
-import { Component } from "./component";
+import { Component } from "@funkia/turbine";
+import { Future } from "@funkia/hareactive";
 
 export const absoluteLayout = uiViewElement(AbsoluteLayout);
 export const dockLayout = uiViewElement(DockLayout);
@@ -43,15 +44,14 @@ export class PageComponent extends Component<{}, any> {
   constructor(private content: Component<any, Page>) {
     super();
   }
-  run(frame: Frame) {
+  run(frame: any /* Frame */, destroyed: Future<boolean>) {
     const p = new Page();
-    this.content.run(p);
+    this.content.run(p as any, destroyed);
     frame.navigate(() => p);
-    return {};
+    return { explicit: {}, output: {} };
   }
 }
 
 export function page(content: Component<any, Page>) {
   return new PageComponent(content);
-};
-
+}

@@ -5,14 +5,20 @@ import { LayoutBase } from "ui/layouts/layout-base";
 import { TextBase } from "ui/text-base";
 import { Frame } from "ui/frame";
 
-import { isBehavior, Behavior } from "@funkia/hareactive";
-import { Component, isComponent, Showable } from "./component";
+import { isBehavior, Behavior, Future } from "@funkia/hareactive";
+import {
+  Component,
+  isComponent,
+  toComponent,
+  Showable,
+  DomApi
+} from "@funkia/turbine";
 import {
   streamFromObservable,
   behaviorFromObservable,
   viewObserve
 } from "./hareactive-wrapper";
-import { toComponent } from "./native";
+import { Out } from "@funkia/turbine";
 
 interface UIConstructor<A> {
   new (): A;
@@ -60,15 +66,15 @@ function id<A>(a: A): A {
   return a;
 }
 
-class UIViewElement<B, A extends View> extends Component<B, Parent> {
+class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
   constructor(
     private viewC: UIConstructor<A>,
     private props: Properties,
-    private child?: Child<any>
+    private child?: Component<P, any>
   ) {
     super();
   }
-  run(parent: Parent): B {
+  run(parent: DomApi, destroyed: Future<boolean>): Out<P, Parent & P> {
     const view = new this.viewC();
 
     if ("style" in this.props) {
@@ -85,6 +91,7 @@ class UIViewElement<B, A extends View> extends Component<B, Parent> {
 
     // output
     let output: any = {};
+    let explicit: any = {};
     if ("streams" in this.props) {
       Object.keys(this.props.streams).reduce((out, key) => {
         const { name, extractor = id } = this.props.streams[key];
@@ -102,10 +109,11 @@ class UIViewElement<B, A extends View> extends Component<B, Parent> {
     }
 
     // add ourself
+    // parent.appendChild(view);
     if (parent instanceof Page) {
       parent.content = view;
     } else {
-      parent.addChild(view);
+      (parent as any).addChild(view);
     }
 
     // add child
@@ -119,14 +127,18 @@ class UIViewElement<B, A extends View> extends Component<B, Parent> {
           throw "Child should be a Text, Number or a Behavior of them";
         }
       } else if (isParent(view) && isChild(this.child)) {
-        const childOut = toComponent(<any>this.child).run(view);
-        Object.assign(output, childOut);
+        const childResult = toComponent(<any>this.child).run(
+          view as any,
+          destroyed
+        );
+        Object.assign(output, childResult.explicit);
+        Object.assign(explicit, childResult.explicit);
       } else {
         throw "Unsupported child";
       }
     }
 
-    return output;
+    return { output, explicit };
   }
 }
 
@@ -143,12 +155,12 @@ export function uiViewElement<A extends View>(
     child?: Child<A>
   ): Component<any, any> {
     if (child === undefined && isChild(propsOrChild)) {
-      return new UIViewElement(viewC, defaultProps, propsOrChild);
+      return new UIViewElement(viewC, defaultProps, propsOrChild as any);
     } else {
       return new UIViewElement(
         viewC,
         mergeProps(defaultProps, <Properties>propsOrChild),
-        child
+        child as any
       );
     }
   }

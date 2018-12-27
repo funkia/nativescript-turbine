@@ -2,12 +2,16 @@ import {
   producerStream,
   Stream,
   producerBehavior,
-  Behavior
+  Behavior,
+  observe
 } from "@funkia/hareactive";
 import { Observable, EventData } from "data/observable";
 import { FPSCallback } from "fps-meter/fps-native";
-import { Showable } from "./component";
+import { Showable } from "@funkia/turbine";
 
+/*
+ * Converts a NativeScript observable into a behavior
+ */
 export function streamFromObservable<A>(
   observable: Observable,
   event: string,
@@ -25,49 +29,45 @@ export function streamFromObservable<A>(
 }
 
 export function behaviorFromObservable<A>(
-  observable: any,
-  property: string,
+  _observable: any,
+  _property: string,
   initial: A,
-  extractor: (e: EventData) => A
+  _extractor: (e: EventData) => A
 ): Behavior<A> {
-  const model = new Observable();
-  observable.bind(
-    {
-      sourceProperty: property,
-      targetProperty: property,
-      twoWay: true
-    },
-    model
-  );
+  return Behavior.of(initial);
+  // FIXME
+  // const model = new Observable();
+  // observable.bind(
+  //   {
+  //     sourceProperty: property,
+  //     targetProperty: property,
+  //     twoWay: true
+  //   },
+  //   model
+  // );
 
-  return producerBehavior<A>(push => {
-    const handler = (e: any) => {
-      if (property === e.propertyName) {
-        push(extractor(e.value));
-      }
-    };
-    model.on(Observable.propertyChangeEvent, handler);
-    return () => {
-      model.off(Observable.propertyChangeEvent, handler);
-    };
-  }, initial);
+  // return producerBehavior<A>(push => {
+  //   const handler = (e: any) => {
+  //     if (property === e.propertyName) {
+  //       push(extractor(e.value));
+  //     }
+  //   };
+  //   model.on(Observable.propertyChangeEvent, handler);
+  //   return () => {
+  //     model.off(Observable.propertyChangeEvent, handler);
+  //   };
+  // }, initial);
+}
+
+function pullOnFrame(pull: (t?: number) => void): () => void {
+  let fps = new FPSCallback(() => pull());
+  fps.start();
+  return () => fps.stop();
 }
 
 export function viewObserve<A extends Showable>(
   update: (a: A) => void,
   behavior: Behavior<A>
 ) {
-  let lastVal: A;
-  let fps = new FPSCallback(() => {
-    const newVal = behavior.pull();
-    if (lastVal !== newVal) {
-      lastVal = newVal;
-      update(newVal);
-    }
-  });
-
-  behavior.observe(update, () => {
-    fps.start();
-    return () => fps.stop();
-  });
+  observe(update, pullOnFrame, behavior);
 }

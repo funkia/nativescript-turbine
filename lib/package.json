@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@funkia/jabz": "0.0.24",
-    "@funkia/turbine": "0.1.5",
     "tns-core-modules": "~4.1.0"
   },
   "files": [
@@ -35,7 +34,9 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@funkia/hareactive": "^0.1.5",
-    "typescript": "^2.9.1"
-  }
+    "@funkia/hareactive": "^0.2.3",
+    "@funkia/turbine": "^0.2.0",
+    "typescript": "^3.2.2"
+  },
+  "prettier": {}
 }
