@@ -1,8 +1,6 @@
-//import { sequence } from "../../jabz";
-//import { PageComponent } from "./elements";
 import { Page } from "ui/page";
 import { Frame } from "ui/frame";
-import { start } from "application";
+import { run } from "application";
 
 export function runComponent<A>(c: any) {
   let pageFn;
@@ -12,5 +10,5 @@ export function runComponent<A>(c: any) {
     }
   };
   c.run(fakeframe);
-  start({ create: pageFn });
+  run({ create: pageFn });
 }

@@ -11,7 +11,7 @@ import { TextField } from "ui/text-field";
 import { Label } from "ui/label";
 
 import { uiViewElement } from "./ui-builder";
-import { Component } from "@funkia/turbine";
+import { Component } from "@funkia/turbine/dist/cmjs/component";
 import { Future } from "@funkia/hareactive";
 
 export const absoluteLayout = uiViewElement(AbsoluteLayout);
@@ -41,7 +41,7 @@ export const button = uiViewElement(Button, {
 });
 
 export class PageComponent extends Component<{}, any> {
-  constructor(private content: Component<any, Page>) {
+  constructor(private content: Component<any, any>) {
     super();
   }
   run(frame: any /* Frame */, destroyed: Future<boolean>) {
@@ -52,6 +52,6 @@ export class PageComponent extends Component<{}, any> {
   }
 }
 
-export function page(content: Component<any, Page>) {
+export function page(content: Component<any, any>) {
   return new PageComponent(content);
 }

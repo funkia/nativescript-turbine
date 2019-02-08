@@ -5,7 +5,8 @@ export {
   isGeneratorFunction,
   Component,
   isComponent,
-  toComponent
-} from "@funkia/turbine";
+  toComponent,
+  modelView
+} from "@funkia/turbine/dist/cmjs/component";
 import * as elements from "./elements";
 export { elements };

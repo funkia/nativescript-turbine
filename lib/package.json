@@ -7,11 +7,12 @@
     "build": "tsc"
   },
   "peerDependencies": {
-    "@funkia/hareactive": "0.1.5"
+    "@funkia/hareactive": "^0.2.5",
+    "tns-core-modules": "^5.1.2"
   },
   "dependencies": {
-    "@funkia/jabz": "0.0.24",
-    "tns-core-modules": "~4.1.0"
+    "@funkia/turbine": "0.2.2",
+    "@funkia/jabz": "0.0.24"
   },
   "files": [
     "dist"
@@ -34,9 +35,9 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@funkia/hareactive": "^0.2.3",
-    "@funkia/turbine": "^0.2.0",
-    "typescript": "^3.2.2"
+    "@funkia/hareactive": "^0.2.5",
+    "tns-core-modules": "^5.1.2",
+    "typescript": "^3.3.3"
   },
   "prettier": {}
 }

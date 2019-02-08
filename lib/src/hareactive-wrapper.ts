@@ -7,7 +7,7 @@ import {
 } from "@funkia/hareactive";
 import { Observable, EventData } from "data/observable";
 import { FPSCallback } from "fps-meter/fps-native";
-import { Showable } from "@funkia/turbine";
+import { Showable } from "@funkia/turbine/dist/cmjs/component";
 
 /*
  * Converts a NativeScript observable into a behavior

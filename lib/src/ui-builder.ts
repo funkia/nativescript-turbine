@@ -11,14 +11,14 @@ import {
   isComponent,
   toComponent,
   Showable,
-  DomApi
-} from "@funkia/turbine";
+  DomApi,
+  Out
+} from "@funkia/turbine/dist/cmjs/component";
 import {
   streamFromObservable,
   behaviorFromObservable,
   viewObserve
 } from "./hareactive-wrapper";
-import { Out } from "@funkia/turbine";
 
 interface UIConstructor<A> {
   new (): A;
