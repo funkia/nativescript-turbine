@@ -1,12 +1,6 @@
-import {
-  producerStream,
-  Stream,
-  producerBehavior,
-  Behavior,
-  observe
-} from "@funkia/hareactive";
-import { Observable, EventData } from "data/observable";
-import { FPSCallback } from "fps-meter/fps-native";
+import { producerStream, Stream, Behavior, observe } from "@funkia/hareactive";
+import { Observable, EventData } from "tns-core-modules/data/observable";
+import { FPSCallback } from "tns-core-modules/fps-meter/fps-native";
 import { Showable } from "@funkia/turbine/dist/cmjs/component";
 
 /*

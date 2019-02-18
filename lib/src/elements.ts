@@ -1,14 +1,13 @@
-import { Page } from "ui/page";
-import { Frame } from "ui/frame";
-import { Button } from "ui/button";
-import { AbsoluteLayout } from "ui/layouts/absolute-layout";
-import { DockLayout } from "ui/layouts/dock-layout";
-import { FlexboxLayout } from "ui/layouts/flexbox-layout";
-import { GridLayout } from "ui/layouts/grid-layout";
-import { StackLayout } from "ui/layouts/stack-layout";
-import { WrapLayout } from "ui/layouts/wrap-layout";
-import { TextField } from "ui/text-field";
-import { Label } from "ui/label";
+import { Page } from "tns-core-modules/ui/page";
+import { Button } from "tns-core-modules/ui/button";
+import { AbsoluteLayout } from "tns-core-modules/ui/layouts/absolute-layout";
+import { DockLayout } from "tns-core-modules/ui/layouts/dock-layout";
+import { FlexboxLayout } from "tns-core-modules/ui/layouts/flexbox-layout";
+import { GridLayout } from "tns-core-modules/ui/layouts/grid-layout";
+import { StackLayout } from "tns-core-modules/ui/layouts/stack-layout";
+import { WrapLayout } from "tns-core-modules/ui/layouts/wrap-layout";
+import { TextField } from "tns-core-modules/ui/text-field";
+import { Label } from "tns-core-modules/ui/label";
 
 import { uiViewElement } from "./ui-builder";
 import { Component } from "@funkia/turbine/dist/cmjs/component";

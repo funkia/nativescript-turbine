@@ -9,6 +9,7 @@ typings
 dist/
 generated/
 coverage/
+.nyc_output
 .vscode
 .awcache
 yarn.lock
@@ -16,3 +17,4 @@ platforms
 package-lock.json
 hooks
 examples/*/app/src/**/*.js
+examples/plain

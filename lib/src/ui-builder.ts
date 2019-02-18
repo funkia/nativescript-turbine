@@ -1,11 +1,10 @@
-import { View } from "ui/core/view";
-import { Page } from "ui/page";
-import { Style } from "ui/styling/style";
-import { LayoutBase } from "ui/layouts/layout-base";
-import { TextBase } from "ui/text-base";
-import { Frame } from "ui/frame";
+import { View } from "tns-core-modules/ui/core/view";
+import { Page } from "tns-core-modules/ui/page";
+import { Style } from "tns-core-modules/ui/styling/style";
+import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
+import { TextBase } from "tns-core-modules/ui/text-base";
 
-import { isBehavior, Behavior, Future } from "@funkia/hareactive";
+import { isBehavior, Behavior, Future, toggle } from "@funkia/hareactive";
 import {
   Component,
   isComponent,
@@ -19,6 +18,19 @@ import {
   behaviorFromObservable,
   viewObserve
 } from "./hareactive-wrapper";
+
+export type ClassNames = Behavior<string> | string;
+
+export type ClassToggles = {
+  [name: string]: boolean | Behavior<boolean>;
+};
+
+export type ClassDescription =
+  | ClassNames
+  | ClassToggles
+  | ClassDescriptionArray;
+
+export interface ClassDescriptionArray extends Array<ClassDescription> {}
 
 interface UIConstructor<A> {
   new (): A;
@@ -47,6 +59,7 @@ type Properties = {
   style?: Partial<Style | Record<string, string>>;
   streams?: Record<string, StreamDescription<any>>;
   behaviors?: Record<string, BehaviorDescription<any>>;
+  class?: ClassDescription;
   props?: Record<string, any>;
 };
 
@@ -66,6 +79,53 @@ function id<A>(a: A): A {
   return a;
 }
 
+function handleSideEffect<A>(
+  input: Behavior<A> | A,
+  sideEffekt: (a: A) => void
+) {
+  if (isBehavior(input)) {
+    viewObserve(sideEffekt, input);
+  } else {
+    sideEffekt(input);
+  }
+}
+
+function handleClasses(view: View, desc: ClassDescription) {
+  if (Array.isArray(desc)) {
+    for (const d of desc) {
+      handleClasses(view, d);
+    }
+  } else if (typeof desc === "string") {
+    toggleClass(view, desc, true);
+  } else if (isBehavior(desc)) {
+    let prev: string;
+    viewObserve(next => {
+      toggleClass(view, prev, false);
+      toggleClass(view, next, true);
+      prev = next;
+    }, desc);
+  } else {
+    const classes = Object.keys(desc);
+    for (const className of classes) {
+      const input = classes[className];
+      handleSideEffect(input, toggleClass.bind(undefined, view, className));
+    }
+  }
+}
+
+function toggleClass(view: View, classStr: string, shouldSet: boolean) {
+  const classes = classStr.split(" ");
+  if (shouldSet) {
+    for (const c of classes) {
+      view.cssClasses.add(c);
+    }
+  } else {
+    for (const c of classes) {
+      view.cssClasses.delete(c);
+    }
+  }
+}
+
 class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
   constructor(
     private viewC: UIConstructor<A>,
@@ -78,15 +138,25 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
     const view = new this.viewC();
 
     if ("style" in this.props) {
-      Object.keys(this.props.style).forEach(key => {
-        view.style.set(key, this.props.style[key]);
-      });
+      for (const key of Object.keys(this.props.style)) {
+        const value = this.props.style[key];
+        handleSideEffect(value, v => {
+          view.style.set(key, v);
+        });
+      }
     }
 
     if ("props" in this.props) {
-      Object.keys(this.props.props).forEach(key => {
-        view.set(key, this.props[key]);
-      });
+      for (const key of Object.keys(this.props.props)) {
+        const value = this.props.props[key];
+        handleSideEffect(value, v => {
+          view.set(key, v);
+        });
+      }
+    }
+
+    if ("class" in this.props) {
+      handleClasses(view, this.props.class);
     }
 
     // output
@@ -137,6 +207,8 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
         throw "Unsupported child";
       }
     }
+
+    // TODO handle destroyed
 
     return { output, explicit };
   }
