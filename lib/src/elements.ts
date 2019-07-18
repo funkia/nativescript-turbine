@@ -1,4 +1,5 @@
 import { Page } from "tns-core-modules/ui/page";
+import { ActionBar } from "tns-core-modules/ui/action-bar";
 import { Button } from "tns-core-modules/ui/button";
 import { AbsoluteLayout } from "tns-core-modules/ui/layouts/absolute-layout";
 import { DockLayout } from "tns-core-modules/ui/layouts/dock-layout";
@@ -8,6 +9,8 @@ import { StackLayout } from "tns-core-modules/ui/layouts/stack-layout";
 import { WrapLayout } from "tns-core-modules/ui/layouts/wrap-layout";
 import { TextField } from "tns-core-modules/ui/text-field";
 import { Label } from "tns-core-modules/ui/label";
+import { DatePicker } from "tns-core-modules/ui/date-picker";
+import { ListPicker } from "tns-core-modules/ui/list-picker";
 
 import { uiViewElement } from "./ui-builder";
 import { Component } from "@funkia/turbine/dist/cmjs/component";
@@ -19,12 +22,21 @@ export const flexboxLayout = uiViewElement(FlexboxLayout);
 export const gridLayout = uiViewElement(GridLayout);
 export const stackLayout = uiViewElement(StackLayout);
 export const wrapLayout = uiViewElement(WrapLayout);
-
 export const label = uiViewElement(Label);
+export const datePicker = uiViewElement(DatePicker, {
+  behaviors: {
+    date: {
+      name: "date",
+      initial: ""
+    }
+  }
+});
+export const listPicker = uiViewElement(ListPicker);
+export const actionBar = uiViewElement(ActionBar);
 
 export const textField = uiViewElement(TextField, {
   behaviors: {
-    textValue: {
+    text: {
       name: "text",
       initial: ""
     }

@@ -1,25 +1,24 @@
 ﻿import { runComponent, elements as e, modelView } from "nativescript-turbine";
 import * as H from "@funkia/hareactive";
-import { setCssFileName } from "application";
-import { Now, Behavior } from "@funkia/hareactive";
+import { setCssFileName } from "tns-core-modules/application";
 setCssFileName("app.css");
 
 function add(a: number, b: number) {
   return a + b;
 }
 
-function model({ tap }: { tap: H.Stream<any> }) {
-  const left = H.scan(add, 42, tap.mapTo(-1));
-  const leftFromNow = H.sample(left);
+type Model = {
+  tap: H.Stream<any>;
+  date: H.Behavior<any>;
+};
+
+function model({ tap, date }: Model) {
+  const leftFromNow = H.scan(add, 42, tap.mapTo(-1));
+  // date.log("date");
   return leftFromNow.map(left => ({ left }));
 }
 
-// <Page.actionBar>
-//     <ActionBar title="My App" icon="" class="action-bar">
-//     </ActionBar>
-// </Page.actionBar>
-
-function tapView({ left }: { left: Behavior<number> }) {
+function tapView({ left }: { left: H.Behavior<number> }) {
   const message = left.map(l =>
     l > 0
       ? `${l} taps left`
@@ -28,6 +27,13 @@ function tapView({ left }: { left: Behavior<number> }) {
 
   return e.stackLayout({ class: "p-20" }, [
     e.label({ class: "h1 text-center" }, "Tap the button"),
+    // e
+    //   .datePicker()
+    //   .output({ date: "date" })
+    //   .map(c => {
+    //     c.date.log();
+    //     return c;
+    //   }),
     e
       .button({ class: "btn btn-primary btn-active" }, "TAP")
       .output({ tap: "tap" }),

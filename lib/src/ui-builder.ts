@@ -19,10 +19,12 @@ import {
   viewObserve
 } from "./hareactive-wrapper";
 
-export type ClassNames = Behavior<string> | string;
+type Changeable<A> = A | Behavior<A>;
+
+export type ClassNames = Changeable<string>;
 
 export type ClassToggles = {
-  [name: string]: boolean | Behavior<boolean>;
+  [name: string]: Changeable<boolean>;
 };
 
 export type ClassDescription =
@@ -40,9 +42,8 @@ type Parent = Page | LayoutBase;
 interface ChildList extends Array<Child> {}
 export type Child<A = {}> =
   | ChildList
-  | Component<A, Parent>
-  | Showable
-  | Behavior<Showable>;
+  | Changeable<Component<A, any>>
+  | Changeable<Showable>;
 
 type StreamDescription<B> = {
   name: string;
@@ -55,12 +56,12 @@ type BehaviorDescription<B> = {
   extractor?: (a: any) => B;
 };
 
-type Properties = {
-  style?: Partial<Style | Record<string, string>>;
+type Properties<A extends View> = {
+  style?: Partial<Style>;
   streams?: Record<string, StreamDescription<any>>;
   behaviors?: Record<string, BehaviorDescription<any>>;
   class?: ClassDescription;
-  props?: Record<string, any>;
+  props?: Partial<{ [K in keyof A]: Changeable<A[K]> }>;
 };
 
 function isShowable(obj: any): obj is Showable {
@@ -129,7 +130,7 @@ function toggleClass(view: View, classStr: string, shouldSet: boolean) {
 class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
   constructor(
     private viewC: UIConstructor<A>,
-    private props: Properties,
+    private props: Properties<A>,
     private child?: Component<P, any>
   ) {
     super();
@@ -216,14 +217,14 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
 
 export function uiViewElement<A extends View>(
   viewC: UIConstructor<A>,
-  defaultProps: Properties = {}
+  defaultProps: Properties<A> = {}
 ) {
   function createUI();
   function createUI(child: Child<A>);
-  function createUI(propsOrChild: Properties);
-  function createUI(props: Properties, child: Child<A>);
+  function createUI(propsOrChild: Properties<A>);
+  function createUI(props: Properties<A>, child: Child<A>);
   function createUI(
-    propsOrChild?: Properties | Child<A>,
+    propsOrChild?: Properties<A> | Child<A>,
     child?: Child<A>
   ): Component<any, any> {
     if (child === undefined && isChild(propsOrChild)) {
@@ -231,7 +232,7 @@ export function uiViewElement<A extends View>(
     } else {
       return new UIViewElement(
         viewC,
-        mergeProps(defaultProps, <Properties>propsOrChild),
+        mergeProps(defaultProps, <Properties<A>>propsOrChild),
         child as any
       );
     }
@@ -239,7 +240,10 @@ export function uiViewElement<A extends View>(
   return createUI;
 }
 
-function mergeProps(a: Properties, b: Properties): Properties {
+function mergeProps<A extends View>(
+  a: Properties<A>,
+  b: Properties<A>
+): Properties<A> {
   // TODO: more intelligent
   return Object.assign({}, a, b);
 }

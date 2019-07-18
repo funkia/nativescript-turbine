@@ -1,4 +1,10 @@
-import { producerStream, Stream, Behavior, observe } from "@funkia/hareactive";
+import {
+  producerStream,
+  producerBehavior,
+  Stream,
+  Behavior,
+  observe
+} from "@funkia/hareactive";
 import { Observable, EventData } from "tns-core-modules/data/observable";
 import { FPSCallback } from "tns-core-modules/fps-meter/fps-native";
 import { Showable } from "@funkia/turbine/dist/cmjs/component";
@@ -23,34 +29,25 @@ export function streamFromObservable<A>(
 }
 
 export function behaviorFromObservable<A>(
-  _observable: any,
-  _property: string,
+  observable: Observable,
+  event: string,
   initial: A,
-  _extractor: (e: EventData) => A
+  extractor: (e: EventData) => A
 ): Behavior<A> {
-  return Behavior.of(initial);
-  // FIXME
-  // const model = new Observable();
-  // observable.bind(
-  //   {
-  //     sourceProperty: property,
-  //     targetProperty: property,
-  //     twoWay: true
-  //   },
-  //   model
-  // );
-
-  // return producerBehavior<A>(push => {
-  //   const handler = (e: any) => {
-  //     if (property === e.propertyName) {
-  //       push(extractor(e.value));
-  //     }
-  //   };
-  //   model.on(Observable.propertyChangeEvent, handler);
-  //   return () => {
-  //     model.off(Observable.propertyChangeEvent, handler);
-  //   };
-  // }, initial);
+  let value: A = initial;
+  return producerBehavior<A>(
+    pull => {
+      const handler = (e: any) => {
+        value = extractor(e.value);
+        pull(value);
+      };
+      observable.on(event, handler);
+      return () => {
+        observable.off(event, handler);
+      };
+    },
+    () => value
+  );
 }
 
 function pullOnFrame(pull: (t?: number) => void): () => void {

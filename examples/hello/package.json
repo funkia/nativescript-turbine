@@ -1,11 +1,11 @@
 {
   "nativescript": {
     "id": "org.nativescript.hello",
-    "tns-android": {
-      "version": "5.1.0"
-    },
     "tns-ios": {
       "version": "5.1.0"
+    },
+    "tns-android": {
+      "version": "5.3.1"
     }
   },
   "main": "src/index.js",
@@ -13,14 +13,14 @@
   "license": "SEE LICENSE IN <your-license-filename>",
   "repository": "<fill-your-repository-here>",
   "dependencies": {
-    "@funkia/hareactive": "^0.2.5",
+    "@funkia/hareactive": "^0.3.1",
     "nativescript-theme-core": "~1.0.4",
     "nativescript-turbine": "../../lib",
-    "tns-core-modules": "^5.2.0"
+    "tns-core-modules": "^5.3.1"
   },
   "devDependencies": {
-    "nativescript-dev-typescript": "^0.8.0",
-    "nativescript-dev-webpack": "^0.20.0"
+    "nativescript-dev-typescript": "^0.9.0",
+    "nativescript-dev-webpack": "^0.21.0"
   },
   "readme": "NativeScript Application"
 }
