@@ -8,7 +8,7 @@
   },
   "peerDependencies": {
     "@funkia/hareactive": "^0.2.5",
-    "tns-core-modules": "^5.1.2"
+    "tns-core-modules": "6.0.1"
   },
   "dependencies": {
     "@funkia/jabz": "0.0.24",
@@ -36,7 +36,7 @@
   "license": "MIT",
   "devDependencies": {
     "@funkia/hareactive": "^0.3.1",
-    "tns-core-modules": "^5.3.1",
+    "tns-core-modules": "6.0.1",
     "typescript": "^3.4.3"
   },
   "prettier": {}

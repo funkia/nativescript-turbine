@@ -1,7 +1,8 @@
 ﻿import { runComponent, elements as e, modelView } from "nativescript-turbine";
 import * as H from "@funkia/hareactive";
 import { setCssFileName } from "tns-core-modules/application";
-setCssFileName("app.css");
+import "./style.css";
+setCssFileName("./style.css");
 
 function add(a: number, b: number) {
   return a + b;
@@ -12,7 +13,7 @@ type Model = {
   date: H.Behavior<any>;
 };
 
-function model({ tap, date }: Model) {
+function model({ tap }: Model) {
   const leftFromNow = H.scan(add, 42, tap.mapTo(-1));
   // date.log("date");
   return leftFromNow.map(left => ({ left }));

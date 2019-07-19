@@ -16,5 +16,5 @@ yarn.lock
 platforms
 package-lock.json
 hooks
-examples/*/app/src/**/*.js
-examples/plain
+examples/*/app/**/*.js
+app_original

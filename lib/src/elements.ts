@@ -23,14 +23,14 @@ export const gridLayout = uiViewElement(GridLayout);
 export const stackLayout = uiViewElement(StackLayout);
 export const wrapLayout = uiViewElement(WrapLayout);
 export const label = uiViewElement(Label);
-export const datePicker = uiViewElement(DatePicker, {
-  behaviors: {
-    date: {
-      name: "date",
-      initial: ""
-    }
-  }
-});
+// export const datePicker = uiViewElement(DatePicker, {
+//   behaviors: {
+//     date: {
+//       name: "date",
+//       initial: ""
+//     }
+//   }
+// });
 export const listPicker = uiViewElement(ListPicker);
 export const actionBar = uiViewElement(ActionBar);
 
