@@ -1,5 +1,5 @@
 import { Page } from "tns-core-modules/ui/page";
-import { ActionBar } from "tns-core-modules/ui/action-bar";
+import { ActionBar, NavigationButton } from "tns-core-modules/ui/action-bar";
 import { Button } from "tns-core-modules/ui/button";
 import { AbsoluteLayout } from "tns-core-modules/ui/layouts/absolute-layout";
 import { DockLayout } from "tns-core-modules/ui/layouts/dock-layout";
@@ -14,7 +14,8 @@ import { ListPicker } from "tns-core-modules/ui/list-picker";
 
 import { uiViewElement } from "./ui-builder";
 import { Component } from "@funkia/turbine/dist/cmjs/component";
-import { Future } from "@funkia/hareactive";
+import { Future, Behavior } from "@funkia/hareactive";
+import { Frame } from "tns-core-modules/ui/frame";
 
 export const absoluteLayout = uiViewElement(AbsoluteLayout);
 export const dockLayout = uiViewElement(DockLayout);
@@ -51,18 +52,49 @@ export const button = uiViewElement(Button, {
   }
 });
 
+export type PageConfigurations = {
+  actionBar: ActionBar;
+};
+
 export class PageComponent extends Component<{}, any> {
-  constructor(private content: Component<any, any>) {
+  constructor(
+    private config: PageConfigurations,
+    private content: Component<any, any>
+  ) {
     super();
   }
   run(frame: any /* Frame */, destroyed: Future<boolean>) {
-    const p = new Page();
-    this.content.run(p as any, destroyed);
-    frame.navigate(() => p);
+    const page = new Page();
+
+    page.actionBar = this.config.actionBar;
+    page.actionBarHidden = false;
+
+    this.content.run(page as any, destroyed);
+    frame.navigate(() => page);
     return { explicit: {}, output: {} };
   }
 }
 
-export function page(content: Component<any, any>) {
-  return new PageComponent(content);
+export function page(config: PageConfigurations, content: Component<any, any>) {
+  return new PageComponent(config, content);
+}
+
+export class FrameComponent extends Component<{}, any> {
+  constructor(private pages: Behavior<PageComponent>) {
+    super();
+  }
+  run(parent: any /* Frame */, destroyed: Future<boolean>) {
+    const f = new Frame();
+    this.pages.subscribe(page => page.run(f, destroyed.mapTo(false)));
+    if (parent instanceof Page) {
+      parent.content = f;
+    } else {
+      (parent as any).addChild(f);
+    }
+    return { explicit: {}, output: {} };
+  }
+}
+
+export function frame(pages: Behavior<PageComponent>) {
+  return new FrameComponent(pages);
 }

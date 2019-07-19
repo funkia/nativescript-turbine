@@ -5,14 +5,13 @@ import { sinkFuture } from "@funkia/hareactive";
 import { Component } from "@funkia/turbine/dist/cmjs/component";
 
 export function runComponent<A>(component: any) {
-  let pageFn;
-  const fakeframe = <Frame>{
-    navigate: function(fn: () => Page) {
-      pageFn = fn;
+  run({
+    create() {
+      const frame = new Frame();
+      component.run(frame);
+      return frame;
     }
-  };
-  component.run(fakeframe);
-  run({ create: pageFn });
+  });
 }
 
 export function testComponent<O, A>(
