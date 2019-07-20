@@ -27,18 +27,25 @@ export const label = uiViewElement(Label);
 export const datePicker = uiViewElement(DatePicker, {
   behaviors: {
     date: {
-      name: "date",
-      initial: ""
+      event: "date",
+      initial: () => ""
     }
   }
 });
-export const listPicker = uiViewElement(ListPicker);
+export const listPicker = uiViewElement(ListPicker, {
+  behaviors: {
+    selectedIndex: {
+      event: "selectedIndexChange",
+      initial: view => view.selectedIndex
+    }
+  }
+});
 
 export const textField = uiViewElement(TextField, {
   behaviors: {
     text: {
-      name: "text",
-      initial: ""
+      event: TextField.textChangeEvent,
+      initial: view => view.text
     }
   }
 });
@@ -46,7 +53,7 @@ export const textField = uiViewElement(TextField, {
 export const button = uiViewElement(Button, {
   streams: {
     tap: {
-      name: "tap"
+      event: "tap"
     }
   }
 });

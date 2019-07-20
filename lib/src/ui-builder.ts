@@ -5,6 +5,7 @@ import { Frame } from "tns-core-modules/ui/frame";
 import { Style } from "tns-core-modules/ui/styling/style";
 import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { TextBase } from "tns-core-modules/ui/text-base";
+import { EventData } from "tns-core-modules/data/observable";
 
 import { isBehavior, Behavior, Future, toggle } from "@funkia/hareactive";
 import {
@@ -48,14 +49,14 @@ export type Child<A = {}> =
   | Changeable<Showable>;
 
 type StreamDescription<B> = {
-  name: string;
-  extractor?: (a: any) => B;
+  event: string;
+  extractor?: (a: EventData) => B;
 };
 
-type BehaviorDescription<B> = {
-  name: string;
-  initial: B;
-  extractor?: (a: any) => B;
+type BehaviorDescription<A extends View, B> = {
+  event: string;
+  initial: (view: A) => B;
+  extractor?: (a: EventData) => B;
 };
 
 type Attributes<A extends View> = Partial<{ [K in keyof A]: Changeable<A[K]> }>;
@@ -63,7 +64,7 @@ type Attributes<A extends View> = Partial<{ [K in keyof A]: Changeable<A[K]> }>;
 type Properties<A extends View> = {
   style?: Partial<Style>;
   streams?: Record<string, StreamDescription<any>>;
-  behaviors?: Record<string, BehaviorDescription<any>>;
+  behaviors?: Record<string, BehaviorDescription<A, any>>;
   class?: ClassDescription;
   attrs?: Attributes<A>;
 };
@@ -186,16 +187,21 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
     let explicit: any = {};
     if ("streams" in this.props) {
       Object.keys(this.props.streams).reduce((out, key) => {
-        const { name, extractor = id } = this.props.streams[key];
-        out[key] = streamFromObservable(view, name, extractor);
+        const { event, extractor = id } = this.props.streams[key];
+        out[key] = streamFromObservable(view, event, extractor);
         return out;
       }, output);
     }
 
     if ("behaviors" in this.props) {
       Object.keys(this.props.behaviors).reduce((out, key) => {
-        const { name, extractor = id, initial } = this.props.behaviors[key];
-        out[key] = behaviorFromObservable(view, name, initial, extractor);
+        const { event, extractor = id, initial } = this.props.behaviors[key];
+        out[key] = behaviorFromObservable(
+          view,
+          event,
+          initial(view),
+          extractor
+        ).at();
         return out;
       }, output);
     }

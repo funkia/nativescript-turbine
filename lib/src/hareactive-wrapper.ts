@@ -3,9 +3,14 @@ import {
   producerBehavior,
   Stream,
   Behavior,
-  observe
+  observe,
+  stepperFrom
 } from "@funkia/hareactive";
-import { Observable, EventData } from "tns-core-modules/data/observable";
+import {
+  Observable,
+  EventData,
+  PropertyChangeData
+} from "tns-core-modules/data/observable";
 import { FPSCallback } from "tns-core-modules/fps-meter/fps-native";
 import { Showable } from "@funkia/turbine/dist/cmjs/component";
 
@@ -28,26 +33,30 @@ export function streamFromObservable<A>(
   });
 }
 
+// Might be useful
+export function behaviorFromObservableProperty<A>(
+  observable: Observable,
+  propertyName: string,
+  initial: A,
+  extractor: (e: any) => A
+): Behavior<Behavior<A>> {
+  const change = <Stream<PropertyChangeData>>(
+    streamFromObservable(observable, Observable.propertyChangeEvent, a => a)
+  );
+  const values = change
+    .filter(evt => evt.propertyName === propertyName)
+    .map(evt => extractor(evt.value));
+  return stepperFrom(initial, values);
+}
+
 export function behaviorFromObservable<A>(
   observable: Observable,
   event: string,
   initial: A,
   extractor: (e: EventData) => A
-): Behavior<A> {
-  let value: A = initial;
-  return producerBehavior<A>(
-    pull => {
-      const handler = (e: any) => {
-        value = extractor(e.value);
-        pull(value);
-      };
-      observable.on(event, handler);
-      return () => {
-        observable.off(event, handler);
-      };
-    },
-    () => value
-  );
+): Behavior<Behavior<A>> {
+  const change = streamFromObservable(observable, event, extractor);
+  return stepperFrom(initial, change);
 }
 
 function pullOnFrame(pull: (t?: number) => void): () => void {

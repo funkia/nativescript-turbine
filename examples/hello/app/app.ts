@@ -8,19 +8,19 @@ function add(a: number, b: number) {
   return a + b;
 }
 
-type Model = {
-  tap: H.Stream<any>;
-};
+type ModelProps = { tap: H.Stream<any> };
 
-function model({ tap }: Model) {
+function model({ tap }: ModelProps) {
   const leftFromNow = H.accum(add, 42, tap.mapTo(-1));
   return leftFromNow.map(left => ({ left }));
 }
 
-function tapView({ left }: { left: H.Behavior<number> }) {
-  const message = left.map(l =>
-    l > 0
-      ? `${l} taps left`
+type ViewProps = { left: H.Behavior<number> };
+
+function view({ left }: ViewProps) {
+  const message = left.map(n =>
+    n > 0
+      ? `${n} taps left`
       : "Hoorraaay! You unlocked the NativeScript clicker achievement!"
   );
 
@@ -33,7 +33,7 @@ function tapView({ left }: { left: H.Behavior<number> }) {
   ]);
 }
 
-const count = modelView(model, tapView);
+const count = modelView(model, view);
 
 const app = e.page([
   e.actionBar({ title: "My App", class: "action-bar" }),
