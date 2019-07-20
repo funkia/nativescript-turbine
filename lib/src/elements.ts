@@ -33,7 +33,6 @@ export const datePicker = uiViewElement(DatePicker, {
   }
 });
 export const listPicker = uiViewElement(ListPicker);
-export const actionBar = uiViewElement(ActionBar);
 
 export const textField = uiViewElement(TextField, {
   behaviors: {
@@ -51,50 +50,25 @@ export const button = uiViewElement(Button, {
     }
   }
 });
+export const actionBar = uiViewElement(ActionBar);
+export const page = uiViewElement(Page);
 
-export type PageConfigurations = {
-  actionBar: ActionBar;
-};
+// export class FrameComponent extends Component<{}, any> {
+//   constructor(private pages: Behavior<PageComponent>) {
+//     super();
+//   }
+//   run(parent: any /* Frame */, destroyed: Future<boolean>) {
+//     const f = new Frame();
+//     this.pages.subscribe(page => page.run(f, destroyed.mapTo(false)));
+//     if (parent instanceof Page) {
+//       parent.content = f;
+//     } else {
+//       (parent as any).addChild(f);
+//     }
+//     return { explicit: {}, output: {} };
+//   }
+// }
 
-export class PageComponent extends Component<{}, any> {
-  constructor(
-    private config: PageConfigurations,
-    private content: Component<any, any>
-  ) {
-    super();
-  }
-  run(frame: any /* Frame */, destroyed: Future<boolean>) {
-    const page = new Page();
-
-    page.actionBar = this.config.actionBar;
-    page.actionBarHidden = false;
-
-    this.content.run(page as any, destroyed);
-    frame.navigate(() => page);
-    return { explicit: {}, output: {} };
-  }
-}
-
-export function page(config: PageConfigurations, content: Component<any, any>) {
-  return new PageComponent(config, content);
-}
-
-export class FrameComponent extends Component<{}, any> {
-  constructor(private pages: Behavior<PageComponent>) {
-    super();
-  }
-  run(parent: any /* Frame */, destroyed: Future<boolean>) {
-    const f = new Frame();
-    this.pages.subscribe(page => page.run(f, destroyed.mapTo(false)));
-    if (parent instanceof Page) {
-      parent.content = f;
-    } else {
-      (parent as any).addChild(f);
-    }
-    return { explicit: {}, output: {} };
-  }
-}
-
-export function frame(pages: Behavior<PageComponent>) {
-  return new FrameComponent(pages);
-}
+// export function frame(pages: Behavior<PageComponent>) {
+//   return new FrameComponent(pages);
+// }

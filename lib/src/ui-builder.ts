@@ -1,5 +1,7 @@
 import { View } from "tns-core-modules/ui/core/view";
 import { Page } from "tns-core-modules/ui/page";
+import { ActionBar } from "tns-core-modules/ui/action-bar";
+import { Frame } from "tns-core-modules/ui/frame";
 import { Style } from "tns-core-modules/ui/styling/style";
 import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { TextBase } from "tns-core-modules/ui/text-base";
@@ -201,7 +203,17 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
     // add ourself
     // parent.appendChild(view);
     if (parent instanceof Page) {
-      parent.content = view;
+      if (view instanceof ActionBar) {
+        parent.actionBar = view;
+      } else {
+        parent.content = view;
+      }
+    } else if (parent instanceof Frame) {
+      parent.navigate({
+        create() {
+          return view;
+        }
+      });
     } else {
       (parent as any).addChild(view);
     }
@@ -214,17 +226,16 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
         } else if (isBehavior(this.child)) {
           viewObserve(a => view.set("text", a.toString()), this.child);
         } else {
-          throw "Child should be a Text, Number or a Behavior of them";
+          throw new Error(
+            "Child should be a Text, Number or a Behavior of them"
+          );
         }
       } else if (isParent(view) && isChild(this.child)) {
-        const childResult = toComponent(<any>this.child).run(
-          view as any,
-          destroyed
-        );
+        const childResult = toComponent(<any>this.child).run(view, destroyed);
         Object.assign(output, childResult.explicit);
         Object.assign(explicit, childResult.explicit);
       } else {
-        throw "Unsupported child";
+        throw new Error("Unsupported child");
       }
     }
 
