@@ -4,6 +4,7 @@
   "description": "Using Turbine to create native mobile applications.",
   "main": "dist/index.js",
   "scripts": {
+    "dev": "tsc -w",
     "build": "tsc"
   },
   "peerDependencies": {

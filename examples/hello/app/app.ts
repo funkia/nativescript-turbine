@@ -32,7 +32,7 @@ function tapView({ left }: { left: H.Behavior<number> }) {
     e
       .button({ class: "btn btn-primary btn-active" }, "TAP")
       .output({ tap: "tap" }),
-    e.label({ class: "h2 text-center", props: { textWrap: true } }, message)
+    e.label({ class: "h2 text-center", textWrap: true }, message)
   ]);
 }
 

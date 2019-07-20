@@ -56,13 +56,25 @@ type BehaviorDescription<B> = {
   extractor?: (a: any) => B;
 };
 
+type Attributes<A extends View> = Partial<{ [K in keyof A]: Changeable<A[K]> }>;
+
 type Properties<A extends View> = {
   style?: Partial<Style>;
   streams?: Record<string, StreamDescription<any>>;
   behaviors?: Record<string, BehaviorDescription<any>>;
   class?: ClassDescription;
-  props?: Partial<{ [K in keyof A]: Changeable<A[K]> }>;
+  attrs?: Attributes<A>;
 };
+
+type AttrProperties<A extends View> = Attributes<A> & Properties<A>;
+
+const propKeywords = new Set([
+  "style",
+  "streams",
+  "behaviors",
+  "class",
+  "attrs"
+]);
 
 function isShowable(obj: any): obj is Showable {
   return typeof obj === "string" || typeof obj === "number";
@@ -130,7 +142,7 @@ function toggleClass(view: View, classStr: string, shouldSet: boolean) {
 class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
   constructor(
     private viewC: UIConstructor<A>,
-    private props: Properties<A>,
+    private props: AttrProperties<A>,
     private child?: Component<P, any>
   ) {
     super();
@@ -147,13 +159,20 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
       }
     }
 
-    if ("props" in this.props) {
-      for (const key of Object.keys(this.props.props)) {
-        const value = this.props.props[key];
-        handleSideEffect(value, v => {
-          view.set(key, v);
-        });
+    const attributes = Object.assign(
+      {},
+      this.props,
+      "attrs" in this.props ? this.props.attrs : {}
+    );
+
+    for (const key of Object.keys(attributes)) {
+      if (propKeywords.has(key)) {
+        continue;
       }
+      const value = attributes[key];
+      handleSideEffect(value, v => {
+        view.set(key, v);
+      });
     }
 
     if ("class" in this.props) {
@@ -217,14 +236,14 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
 
 export function uiViewElement<A extends View>(
   viewC: UIConstructor<A>,
-  defaultProps: Properties<A> = {}
+  defaultProps: AttrProperties<A> = {}
 ) {
   function createUI();
   function createUI(child: Child<A>);
-  function createUI(propsOrChild: Properties<A>);
-  function createUI(props: Properties<A>, child: Child<A>);
+  function createUI(propsOrChild: AttrProperties<A>);
+  function createUI(props: AttrProperties<A>, child: Child<A>);
   function createUI(
-    propsOrChild?: Properties<A> | Child<A>,
+    propsOrChild?: AttrProperties<A> | Child<A>,
     child?: Child<A>
   ): Component<any, any> {
     if (child === undefined && isChild(propsOrChild)) {
@@ -232,7 +251,7 @@ export function uiViewElement<A extends View>(
     } else {
       return new UIViewElement(
         viewC,
-        mergeProps(defaultProps, <Properties<A>>propsOrChild),
+        mergeProps(defaultProps, <AttrProperties<A>>propsOrChild),
         child as any
       );
     }
@@ -241,9 +260,9 @@ export function uiViewElement<A extends View>(
 }
 
 function mergeProps<A extends View>(
-  a: Properties<A>,
-  b: Properties<A>
-): Properties<A> {
+  a: AttrProperties<A>,
+  b: AttrProperties<A>
+): AttrProperties<A> {
   // TODO: more intelligent
   return Object.assign({}, a, b);
 }
