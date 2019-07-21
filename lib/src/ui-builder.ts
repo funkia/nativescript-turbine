@@ -1,4 +1,5 @@
 import { View } from "tns-core-modules/ui/core/view";
+import { ContentView } from "tns-core-modules/ui/content-view";
 import { Page } from "tns-core-modules/ui/page";
 import { ActionBar } from "tns-core-modules/ui/action-bar";
 import { Frame } from "tns-core-modules/ui/frame";
@@ -88,7 +89,7 @@ function isChild(a: any): a is Child {
 }
 
 function isParent(a: any): a is Parent {
-  return a instanceof Page || a instanceof LayoutBase;
+  return a instanceof ContentView || a instanceof LayoutBase;
 }
 
 function id<A>(a: A): A {
@@ -208,12 +209,10 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
 
     // add ourself
     // parent.appendChild(view);
-    if (parent instanceof Page) {
-      if (view instanceof ActionBar) {
-        parent.actionBar = view;
-      } else {
-        parent.content = view;
-      }
+    if (view instanceof ActionBar && parent instanceof Page) {
+      parent.actionBar = view;
+    } else if (parent instanceof ContentView) {
+      parent.content = view;
     } else if (parent instanceof Frame) {
       parent.navigate({
         create() {
@@ -224,7 +223,7 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
       (parent as any).addChild(view);
     }
 
-    // add child
+    // run child
     if (this.child !== undefined) {
       if (view instanceof TextBase) {
         if (isShowable(this.child)) {
@@ -233,7 +232,7 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
           viewObserve(a => view.set("text", a.toString()), this.child);
         } else {
           throw new Error(
-            "Child should be a Text, Number or a Behavior of them"
+            "Child should be a string, Number or a Behavior of them"
           );
         }
       } else if (isParent(view) && isChild(this.child)) {
