@@ -16,7 +16,7 @@ import { DatePicker } from "tns-core-modules/ui/date-picker";
 import { ListPicker } from "tns-core-modules/ui/list-picker";
 
 import { uiViewElement } from "./ui-builder";
-import { Component } from "@funkia/turbine/dist/cmjs/component";
+import { Component } from "./component";
 import { Frame } from "tns-core-modules/ui/frame";
 
 export const absoluteLayout = uiViewElement(AbsoluteLayout);

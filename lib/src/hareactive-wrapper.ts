@@ -1,6 +1,5 @@
 import {
   producerStream,
-  producerBehavior,
   Stream,
   Behavior,
   observe,
@@ -12,7 +11,7 @@ import {
   PropertyChangeData
 } from "tns-core-modules/data/observable";
 import { FPSCallback } from "tns-core-modules/fps-meter/fps-native";
-import { Showable } from "@funkia/turbine/dist/cmjs/component";
+import { Showable } from "./utils";
 
 /*
  * Converts a NativeScript observable into a behavior
@@ -65,9 +64,6 @@ function pullOnFrame(pull: (t?: number) => void): () => void {
   return () => fps.stop();
 }
 
-export function viewObserve<A extends Showable>(
-  update: (a: A) => void,
-  behavior: Behavior<A>
-) {
+export function viewObserve<A>(update: (a: A) => void, behavior: Behavior<A>) {
   observe(update, pullOnFrame, behavior);
 }

@@ -1,33 +1,46 @@
-import { View } from "tns-core-modules/ui/core/view";
+import { View, ContainerView } from "tns-core-modules/ui/core/view";
 import { ContentView } from "tns-core-modules/ui/content-view";
 import { Page } from "tns-core-modules/ui/page";
 import { ActionBar } from "tns-core-modules/ui/action-bar";
 import { Frame } from "tns-core-modules/ui/frame";
 import { Style } from "tns-core-modules/ui/styling/style";
-import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { TextBase } from "tns-core-modules/ui/text-base";
+import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { EventData } from "tns-core-modules/data/observable";
 
-import { isBehavior, Behavior, Future, toggle } from "@funkia/hareactive";
-import {
-  Component,
-  isComponent,
-  toComponent,
-  Showable,
-  DomApi,
-  Out
-} from "@funkia/turbine/dist/cmjs/component";
+import { isBehavior, Behavior, Future } from "@funkia/hareactive";
+import { Component, isComponent, toComponent, ViewApi, Out } from "./component";
 import {
   streamFromObservable,
   behaviorFromObservable,
   viewObserve
 } from "./hareactive-wrapper";
+import { Showable, isShowable, Changeable, ConstructorOf } from "./utils";
 
-type Changeable<A> = A | Behavior<A>;
+export type Parent = ContentView | ContainerView;
 
-export type ClassNames = Changeable<string>;
+interface ChildList extends Array<Child> {}
 
-export type ClassToggles = {
+export type Child<E = any, A = {}> =
+  | ChildList
+  | Changeable<Component<E, A, any>>
+  | Changeable<Showable>;
+
+export function isChild(a: any): a is Child {
+  return isComponent(a) || isShowable(a) || Array.isArray(a) || isBehavior(a);
+}
+
+export function isParent(a: any): a is Parent {
+  return a instanceof ContentView || a instanceof ContainerView;
+}
+
+function id<A>(a: A): A {
+  return a;
+}
+
+type ClassNames = Changeable<string>;
+
+type ClassToggles = {
   [name: string]: Changeable<boolean>;
 };
 
@@ -37,17 +50,6 @@ export type ClassDescription =
   | ClassDescriptionArray;
 
 export interface ClassDescriptionArray extends Array<ClassDescription> {}
-
-interface UIConstructor<A> {
-  new (): A;
-}
-
-type Parent = Page | LayoutBase;
-interface ChildList extends Array<Child> {}
-export type Child<A = {}> =
-  | ChildList
-  | Changeable<Component<A, any>>
-  | Changeable<Showable>;
 
 type StreamDescription<B> = {
   event: string;
@@ -80,26 +82,7 @@ const propKeywords = new Set([
   "attrs"
 ]);
 
-function isShowable(obj: any): obj is Showable {
-  return typeof obj === "string" || typeof obj === "number";
-}
-
-function isChild(a: any): a is Child {
-  return isComponent(a) || isShowable(a) || Array.isArray(a) || isBehavior(a);
-}
-
-function isParent(a: any): a is Parent {
-  return a instanceof ContentView || a instanceof LayoutBase;
-}
-
-function id<A>(a: A): A {
-  return a;
-}
-
-function handleSideEffect<A>(
-  input: Behavior<A> | A,
-  sideEffekt: (a: A) => void
-) {
+function handleSideEffect<A>(input: Changeable<A>, sideEffekt: (a: A) => void) {
   if (isBehavior(input)) {
     viewObserve(sideEffekt, input);
   } else {
@@ -143,15 +126,53 @@ function toggleClass(view: View, classStr: string, shouldSet: boolean) {
   }
 }
 
-class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
+export class NativeViewApi<A extends View> implements ViewApi<A> {
+  constructor(public parent: Parent) {}
+  appendChild(child: A) {
+    if (child instanceof ActionBar && this.parent instanceof Page) {
+      this.parent.actionBar = child;
+    } else if (this.parent instanceof ContentView) {
+      this.parent.content = child;
+    } else if (this.parent instanceof Frame) {
+      this.parent.navigate({
+        create() {
+          return child;
+        }
+      });
+    } else if (this.parent instanceof LayoutBase) {
+      this.parent.addChild(child);
+    } else {
+      throw new Error("Component could not mount to parent");
+    }
+  }
+  insertBefore(insert: A, before: A) {
+    if (this.parent instanceof LayoutBase) {
+      const i = this.parent.getChildIndex(before);
+      this.parent.insertChild(insert, i);
+    } else {
+      this.appendChild(before);
+    }
+  }
+  removeChild(child: A) {
+    if (this.parent instanceof LayoutBase) {
+      this.parent.removeChild(child);
+    } else if (this.parent instanceof ContentView) {
+      this.parent.content = null;
+    } else if (this.parent instanceof Frame) {
+      throw new Error("Not implemented yet");
+    }
+  }
+}
+
+class UIViewElement<E extends View> extends Component<E, any, any> {
   constructor(
-    private viewC: UIConstructor<A>,
-    private props: AttrProperties<A>,
-    private child?: Component<P, any>
+    private viewC: ConstructorOf<E>,
+    private props: AttrProperties<E>,
+    private child?: Component<E, any, any>
   ) {
     super();
   }
-  run(parent: DomApi, destroyed: Future<boolean>): Out<P, Parent & P> {
+  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<any, any> {
     const view = new this.viewC();
 
     if ("style" in this.props) {
@@ -208,20 +229,7 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
     }
 
     // add ourself
-    // parent.appendChild(view);
-    if (view instanceof ActionBar && parent instanceof Page) {
-      parent.actionBar = view;
-    } else if (parent instanceof ContentView) {
-      parent.content = view;
-    } else if (parent instanceof Frame) {
-      parent.navigate({
-        create() {
-          return view;
-        }
-      });
-    } else {
-      (parent as any).addChild(view);
-    }
+    parent.appendChild(view);
 
     // run child
     if (this.child !== undefined) {
@@ -236,7 +244,10 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
           );
         }
       } else if (isParent(view) && isChild(this.child)) {
-        const childResult = toComponent(<any>this.child).run(view, destroyed);
+        const childResult = toComponent(this.child).run(
+          new NativeViewApi(view),
+          destroyed.mapTo(false)
+        );
         Object.assign(output, childResult.explicit);
         Object.assign(explicit, childResult.explicit);
       } else {
@@ -245,13 +256,18 @@ class UIViewElement<B, A extends View, P> extends Component<P, Parent & P> {
     }
 
     // TODO handle destroyed
+    destroyed.subscribe(isTopLevel => {
+      if (isTopLevel) {
+        parent.removeChild(view);
+      }
+    });
 
     return { output, explicit };
   }
 }
 
 export function uiViewElement<A extends View>(
-  viewC: UIConstructor<A>,
+  viewC: ConstructorOf<A>,
   defaultProps: AttrProperties<A> = {}
 ) {
   function createUI();
@@ -261,7 +277,7 @@ export function uiViewElement<A extends View>(
   function createUI(
     propsOrChild?: AttrProperties<A> | Child<A>,
     child?: Child<A>
-  ): Component<any, any> {
+  ): Component<A, any, any> {
     if (child === undefined && isChild(propsOrChild)) {
       return new UIViewElement(viewC, defaultProps, propsOrChild as any);
     } else {
