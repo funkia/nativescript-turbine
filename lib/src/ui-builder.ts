@@ -150,7 +150,7 @@ export class NativeViewApi<A extends View> implements ViewApi<A> {
       const i = this.parent.getChildIndex(before);
       this.parent.insertChild(insert, i);
     } else {
-      this.appendChild(before);
+      this.appendChild(insert);
     }
   }
   removeChild(child: A) {
