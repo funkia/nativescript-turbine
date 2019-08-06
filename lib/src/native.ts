@@ -8,7 +8,7 @@ import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { Label } from "tns-core-modules/ui/label/label";
 import { NativeViewApi } from "./ui-builder";
 
-export function runComponent<A>(component: any) {
+export function runComponent(component: any) {
   const destroyed = sinkFuture<boolean>();
   run({
     create() {
@@ -53,7 +53,7 @@ export class FixedDomPosition<A> implements ViewApi<A> {
     if (this.api.parent instanceof LayoutBase) {
       this.api.insertBefore(child, this.fixpoint);
     } else {
-      this.appendChild(child);
+      this.api.appendChild(child);
     }
   }
   insertBefore(e: A, a: A): void {

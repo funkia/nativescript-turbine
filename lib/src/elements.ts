@@ -16,9 +16,9 @@ import { DatePicker } from "tns-core-modules/ui/date-picker";
 import { ListPicker } from "tns-core-modules/ui/list-picker";
 
 import { uiViewElement } from "./ui-builder";
-import { Component } from "./component";
 import { Frame } from "tns-core-modules/ui/frame";
 
+export { text } from "./component";
 export const absoluteLayout = uiViewElement(AbsoluteLayout);
 export const dockLayout = uiViewElement(DockLayout);
 export const flexboxLayout = uiViewElement(FlexboxLayout);
@@ -28,6 +28,7 @@ export const wrapLayout = uiViewElement(WrapLayout);
 export const scrollView = uiViewElement(ScrollView);
 
 export const label = uiViewElement(Label);
+
 export const datePicker = uiViewElement(DatePicker, {
   behaviors: {
     date: {
@@ -72,6 +73,7 @@ export const button = uiViewElement(Button, {
 export const actionBar = uiViewElement(ActionBar);
 export const page = uiViewElement(Page);
 export const frame = uiViewElement(Frame);
+
 // export class FrameComponent extends Component<{}, any> {
 //   constructor(private pages: Behavior<PageComponent>) {
 //     super();

@@ -466,9 +466,28 @@ class ListComponent<E> extends Component<E, any, any> {
   }
 }
 
+class TextComponent extends Component<Showable, {}, {}> {
+  constructor(private text: Showable) {
+    super();
+  }
+  run(api: ViewApi<Showable>, destroyed: Future<boolean>) {
+    api.appendChild(this.text);
+    return {
+      explicit: {},
+      output: {}
+    };
+  }
+}
+
+export function text(show: Showable) {
+  return new TextComponent(show);
+}
+
 export function toComponent<A extends Child>(child: A): ToComponent<A> {
   if (isComponent(child)) {
     return child as any;
+  } else if (isShowable(child)) {
+    return text(child) as any;
   } else if (isBehavior(child)) {
     return dynamic(child).mapTo({}) as any;
   } else if (isGeneratorFunction(child)) {
@@ -476,7 +495,7 @@ export function toComponent<A extends Child>(child: A): ToComponent<A> {
   } else if (Array.isArray(child)) {
     return new ListComponent(child) as any;
   } else {
-    throw new Error("Child could not be converted to component");
+    throw new Error("Child could not be converted to component: " + child);
   }
 }
 
@@ -618,4 +637,54 @@ export function list<E, A, O>(
   getKey: (a: A, index: number) => number | string = id as any
 ): Component<E, {}, Behavior<O[]>> {
   return new ComponentList(componentCreator, listB, getKey);
+}
+
+export type Wrapped<E, P, O> = (undefined extends P
+  ? {
+      // Optional props
+      // Only props
+      (props?: P): Component<E, {}, O>;
+      // Only child
+      <Ch extends Child>(child: Ch): Component<
+        E,
+        ChildExplicitOutput<Ch>,
+        ChildExplicitOutput<Ch> & O
+      >;
+    }
+  : {
+      // Required props
+      // Only props
+      (props: P): Component<E, {}, O>;
+    }) & {
+  // Both props and child
+  <Ch extends Child>(props: P, child: Ch): Component<
+    E,
+    ChildExplicitOutput<Ch>,
+    ChildExplicitOutput<Ch> & O
+  >;
+};
+
+export function wrapper<E, P, O>(
+  fn: (
+    props: P,
+    child: Component<E, any, any> | undefined
+  ) => Component<E, any, O>
+): Wrapped<E, P, O> {
+  function wrappedComponent(
+    newPropsOrChild: P | Child,
+    childOrUndefined: Child | undefined
+  ) {
+    const props =
+      newPropsOrChild !== undefined && !isChild(newPropsOrChild)
+        ? newPropsOrChild
+        : undefined;
+    const child =
+      childOrUndefined !== undefined
+        ? toComponent(childOrUndefined)
+        : isChild(newPropsOrChild)
+        ? toComponent(newPropsOrChild)
+        : undefined;
+    return fn(props!, child);
+  }
+  return <any>wrappedComponent;
 }

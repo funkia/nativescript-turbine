@@ -8,8 +8,8 @@ import { TextBase } from "tns-core-modules/ui/text-base";
 import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { EventData } from "tns-core-modules/data/observable";
 
-import { isBehavior, Behavior, Future } from "@funkia/hareactive";
-import { Component, isComponent, toComponent, ViewApi, Out } from "./component";
+import { isBehavior, Future } from "@funkia/hareactive";
+import { Component, isComponent, ViewApi, Out, wrapper } from "./component";
 import {
   streamFromObservable,
   behaviorFromObservable,
@@ -31,7 +31,11 @@ export function isChild(a: any): a is Child {
 }
 
 export function isParent(a: any): a is Parent {
-  return a instanceof ContentView || a instanceof ContainerView;
+  return (
+    a instanceof TextBase ||
+    a instanceof ContentView ||
+    a instanceof ContainerView
+  );
 }
 
 function id<A>(a: A): A {
@@ -131,6 +135,9 @@ export class NativeViewApi<A extends View> implements ViewApi<A> {
   appendChild(child: A) {
     if (child instanceof ActionBar && this.parent instanceof Page) {
       this.parent.actionBar = child;
+    } else if (this.parent instanceof TextBase && isShowable(child)) {
+      // this.parent.text = child.toString();
+      this.parent.set("text", child.toString());
     } else if (this.parent instanceof ContentView) {
       this.parent.content = child;
     } else if (this.parent instanceof Frame) {
@@ -233,26 +240,15 @@ class UIViewElement<E extends View> extends Component<E, any, any> {
 
     // run child
     if (this.child !== undefined) {
-      if (view instanceof TextBase) {
-        if (isShowable(this.child)) {
-          view.set("text", this.child.toString());
-        } else if (isBehavior(this.child)) {
-          viewObserve(a => view.set("text", a.toString()), this.child);
-        } else {
-          throw new Error(
-            "Child should be a string, Number or a Behavior of them"
-          );
-        }
-      } else if (isParent(view) && isChild(this.child)) {
-        const childResult = toComponent(this.child).run(
-          new NativeViewApi(view),
-          destroyed.mapTo(false)
-        );
-        Object.assign(output, childResult.explicit);
-        Object.assign(explicit, childResult.explicit);
-      } else {
-        throw new Error("Unsupported child");
+      if (!isParent(view)) {
+        throw new Error("Component does not support children");
       }
+      const childResult = this.child.run(
+        new NativeViewApi(view),
+        destroyed.mapTo(false)
+      );
+      Object.assign(output, childResult.explicit);
+      Object.assign(explicit, childResult.explicit);
     }
 
     // TODO handle destroyed
@@ -270,25 +266,10 @@ export function uiViewElement<A extends View>(
   viewC: ConstructorOf<A>,
   defaultProps: AttrProperties<A> = {}
 ) {
-  function createUI();
-  function createUI(child: Child<A>);
-  function createUI(propsOrChild: AttrProperties<A>);
-  function createUI(props: AttrProperties<A>, child: Child<A>);
-  function createUI(
-    propsOrChild?: AttrProperties<A> | Child<A>,
-    child?: Child<A>
-  ): Component<A, any, any> {
-    if (child === undefined && isChild(propsOrChild)) {
-      return new UIViewElement(viewC, defaultProps, propsOrChild as any);
-    } else {
-      return new UIViewElement(
-        viewC,
-        mergeProps(defaultProps, <AttrProperties<A>>propsOrChild),
-        child as any
-      );
-    }
-  }
-  return createUI;
+  return wrapper(
+    (props: AttrProperties<A>, child: Child<A>) =>
+      new UIViewElement(viewC, mergeProps(defaultProps, props), <any>child)
+  );
 }
 
 function mergeProps<A extends View>(
