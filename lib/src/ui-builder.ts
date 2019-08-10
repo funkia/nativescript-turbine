@@ -8,7 +8,7 @@ import { TextBase } from "tns-core-modules/ui/text-base";
 import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { EventData } from "tns-core-modules/data/observable";
 
-import { isBehavior, Future } from "@funkia/hareactive";
+import { isBehavior, Future, Stream, Behavior } from "@funkia/hareactive";
 import { Component, isComponent, ViewApi, Out, wrapper } from "./component";
 import {
   streamFromObservable,
@@ -59,19 +59,32 @@ type StreamDescription<B> = {
   event: string;
   extractor?: (a: EventData) => B;
 };
+type StreamDescriptions = Record<string, StreamDescription<any>>;
 
-type BehaviorDescription<A extends View, B> = {
-  event: string;
-  initial: (view: A) => B;
-  extractor?: (a: EventData) => B;
+export type OutputStream<T extends StreamDescriptions> = {
+  [K in keyof T]: Stream<ReturnType<T[K]["extractor"]>>
 };
+
+type BehaviorDescription<A extends View, B> = StreamDescription<B> & {
+  initial: (view: A) => B;
+};
+
+type BehaviorDescriptions<A extends View> = Record<
+  string,
+  BehaviorDescription<A, any>
+>;
+
+export type OutputBehavior<
+  A extends View,
+  T extends BehaviorDescriptions<A>
+> = { [K in keyof T]: Behavior<ReturnType<T[K]["extractor"]>> };
 
 type Attributes<A extends View> = Partial<{ [K in keyof A]: Changeable<A[K]> }>;
 
 type Properties<A extends View> = {
   style?: Partial<Style>;
-  streams?: Record<string, StreamDescription<any>>;
-  behaviors?: Record<string, BehaviorDescription<A, any>>;
+  streams?: StreamDescriptions;
+  behaviors?: BehaviorDescriptions<A>;
   class?: ClassDescription;
   attrs?: Attributes<A>;
 };
@@ -171,15 +184,34 @@ export class NativeViewApi<A extends View> implements ViewApi<A> {
   }
 }
 
-class UIViewElement<E extends View> extends Component<E, any, any> {
+export type DefaultOutput = {
+  // [E in EventName]: Stream<HTMLElementEventMap[E]>
+};
+
+export type InitialOutput<
+  E extends View,
+  P extends AttrProperties<E>
+> = (P["streams"] extends StreamDescriptions
+  ? OutputStream<P["streams"]>
+  : {}) &
+  (P["behaviors"] extends BehaviorDescriptions<E>
+    ? OutputBehavior<E, P["behaviors"]>
+    : {}) &
+  DefaultOutput;
+
+class UIViewElement<E extends View, O, P, A> extends Component<
+  E,
+  O & P,
+  A & P
+> {
   constructor(
     private viewC: ConstructorOf<E>,
     private props: AttrProperties<E>,
-    private child?: Component<E, any, any>
+    private child?: Component<E, P, any>
   ) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<any, any> {
+  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<O & P, A & P> {
     const view = new this.viewC();
 
     if ("style" in this.props) {
@@ -262,13 +294,13 @@ class UIViewElement<E extends View> extends Component<E, any, any> {
   }
 }
 
-export function uiViewElement<A extends View>(
-  viewC: ConstructorOf<A>,
-  defaultProps: AttrProperties<A> = {}
+export function uiViewElement<E extends View, P extends AttrProperties<E>>(
+  viewC: ConstructorOf<E>,
+  defaultProps?: P
 ) {
-  return wrapper(
-    (props: AttrProperties<A>, child: Child<A>) =>
-      new UIViewElement(viewC, mergeProps(defaultProps, props), <any>child)
+  return wrapper<E, AttrProperties<E> | undefined, InitialOutput<E, P>>(
+    (props, child: Child<E>) =>
+      <any>new UIViewElement(viewC, mergeProps(defaultProps, props), <any>child)
   );
 }
 
