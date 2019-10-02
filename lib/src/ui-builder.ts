@@ -8,8 +8,8 @@ import { TextBase } from "tns-core-modules/ui/text-base";
 import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { EventData } from "tns-core-modules/data/observable";
 
-import { isBehavior, Future, Stream, Behavior } from "@funkia/hareactive";
-import { Component, isComponent, ViewApi, Out, wrapper } from "./component";
+import { isBehavior, Future, Stream, Behavior, Time } from "@funkia/hareactive";
+import { Component, isComponent, DomApi, Out, wrapper } from "./component";
 import {
   streamFromObservable,
   behaviorFromObservable,
@@ -21,9 +21,9 @@ export type Parent = ContentView | ContainerView;
 
 interface ChildList extends Array<Child> {}
 
-export type Child<E = any, A = {}> =
+export type Child<A = {}> =
   | ChildList
-  | Changeable<Component<E, A, any>>
+  | Changeable<Component<A, any>>
   | Changeable<Showable>;
 
 export function isChild(a: any): a is Child {
@@ -62,7 +62,7 @@ type StreamDescription<B> = {
 type StreamDescriptions = Record<string, StreamDescription<any>>;
 
 export type OutputStream<T extends StreamDescriptions> = {
-  [K in keyof T]: Stream<ReturnType<T[K]["extractor"]>>
+  [K in keyof T]: Stream<ReturnType<T[K]["extractor"]>>;
 };
 
 type BehaviorDescription<A extends View, B> = StreamDescription<B> & {
@@ -143,7 +143,7 @@ function toggleClass(view: View, classStr: string, shouldSet: boolean) {
   }
 }
 
-export class NativeViewApi<A extends View> implements ViewApi<A> {
+export class NativeViewApi<A extends View> implements DomApi<A> {
   constructor(public parent: Parent) {}
   appendChild(child: A) {
     if (child instanceof ActionBar && this.parent instanceof Page) {
@@ -199,19 +199,19 @@ export type InitialOutput<
     : {}) &
   DefaultOutput;
 
-class UIViewElement<E extends View, O, P, A> extends Component<
-  E,
-  O & P,
-  A & P
-> {
+class UIViewElement<E extends View, O, P, A> extends Component<O, A & P> {
   constructor(
     private viewC: ConstructorOf<E>,
     private props: AttrProperties<E>,
-    private child?: Component<E, P, any>
+    private child?: Component<any, P>
   ) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<O & P, A & P> {
+  run(
+    parent: DomApi<E>,
+    destroyed: Future<boolean>,
+    time: Time
+  ): Out<O, A & P> {
     const view = new this.viewC();
 
     if ("style" in this.props) {
@@ -244,14 +244,14 @@ class UIViewElement<E extends View, O, P, A> extends Component<
     }
 
     // output
+    let available: any = {};
     let output: any = {};
-    let explicit: any = {};
     if ("streams" in this.props) {
       Object.keys(this.props.streams).reduce((out, key) => {
         const { event, extractor = id } = this.props.streams[key];
         out[key] = streamFromObservable(view, event, extractor);
         return out;
-      }, output);
+      }, available);
     }
 
     if ("behaviors" in this.props) {
@@ -264,7 +264,7 @@ class UIViewElement<E extends View, O, P, A> extends Component<
           extractor
         ).at();
         return out;
-      }, output);
+      }, available);
     }
 
     // add ourself
@@ -277,10 +277,10 @@ class UIViewElement<E extends View, O, P, A> extends Component<
       }
       const childResult = this.child.run(
         new NativeViewApi(view),
-        destroyed.mapTo(false)
+        destroyed.mapTo(false),
+        time
       );
-      Object.assign(output, childResult.explicit);
-      Object.assign(explicit, childResult.explicit);
+      Object.assign(output, childResult.output);
     }
 
     // TODO handle destroyed
@@ -290,7 +290,7 @@ class UIViewElement<E extends View, O, P, A> extends Component<
       }
     });
 
-    return { output, explicit };
+    return { available, output };
   }
 }
 
@@ -299,7 +299,7 @@ export function uiViewElement<E extends View, P extends AttrProperties<E>>(
   defaultProps?: P
 ) {
   return wrapper<E, AttrProperties<E> | undefined, InitialOutput<E, P>>(
-    (props, child: Child<E>) =>
+    (props, child: Child) =>
       <any>new UIViewElement(viewC, mergeProps(defaultProps, props), <any>child)
   );
 }

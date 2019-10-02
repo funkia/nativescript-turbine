@@ -7,33 +7,27 @@ import {
   runNow,
   sinkBehavior,
   sinkFuture,
-  Stream
+  Stream,
+  instant,
+  Time
 } from "@funkia/hareactive";
-import { fgo, go, Monad, monad } from "@funkia/jabz";
-import { FixedDomPosition } from "./native";
-import {
-  copyRemaps,
-  id,
-  Merge,
-  mergeObj,
-  Showable,
-  isShowable,
-  isGeneratorFunction
-} from "./utils";
 import { viewObserve } from "./hareactive-wrapper";
+import { Monad, monad } from "@funkia/jabz";
+import { copyRemaps, id, Merge, mergeObj, Showable, isShowable } from "./utils";
+import { FixedDomPosition } from "./native";
 
 const supportsProxy = typeof Proxy !== "undefined";
 
-export interface ViewApi<C = Node> {
+export interface DomApi<C = Node> {
   parent: any;
   appendChild(child: C): void;
   insertBefore(insert: C, before: C): void;
   removeChild(child: C): void;
 }
 
-export type Out<O, A> = {
-  explicit: O;
-  output: A;
+export type Out<A, O> = {
+  available: A;
+  output: O;
 };
 
 /**
@@ -43,63 +37,78 @@ export type Out<O, A> = {
  * make it a monad in different way than Now.
  */
 @monad
-export abstract class Component<E, O, A> implements Monad<A> {
-  static of<B>(b: B): Component<any, {}, B> {
+export abstract class Component<A, O> implements Monad<O> {
+  static of<B>(b: B): Component<{}, B> {
     return new OfComponent(b);
   }
-  of<B>(b: B): Component<any, {}, B> {
-    return new OfComponent(b);
+  of<P>(p: P): Component<{}, P> {
+    return new OfComponent(p);
   }
-  flatMap<B>(f: (a: A) => Component<E, O, B>): Component<E, O, B> {
+  flatMap<B, P>(f: (o: O) => Component<B, P>): Component<A, P> {
     return new FlatMapComponent(this, f);
   }
-  chain<B>(f: (a: A) => Component<E, O, B>): Component<E, O, B> {
+  chain<B, P>(f: (o: O) => Component<B, P>): Component<A, P> {
     return new FlatMapComponent(this, f);
   }
-  output<P>(f: (a: A) => P): Component<E, O & P, A>;
-  output<B extends Record<string, keyof A>>(
+  use<P>(f: (a: A) => P): Component<A, O & P>;
+  use<B extends Record<string, keyof A>>(
     remaps: B
-  ): Component<E, O & Remap<A, B>, A>;
-  output(handler: any): Component<E, any, A> {
+  ): Component<A, O & Remap<A, B>>;
+  use(handler: any): Component<A, any> {
     if (typeof handler === "function") {
-      return new HandleOutput((e, o) => mergeObj(e, handler(o)), this);
+      return new HandleOutput(
+        (a, o) => ({
+          available: a,
+          output: mergeObj(mergeObj({}, handler(a)), o)
+        }),
+        this
+      );
     } else {
       return new HandleOutput(
-        (e, o) => mergeObj(e, copyRemaps(handler, o)),
+        (a, o) => ({
+          available: a,
+          output: mergeObj(mergeObj({}, o), copyRemaps(handler, a))
+        }),
         this
       );
     }
-    // return new OutputComponent(remaps, this);
+  }
+  output<R>(o: R): Result<R, O> {
+    return { available: o, component: this };
+  }
+  view(): Component<O, {}> {
+    return view(this);
   }
   static multi: boolean = false;
   multi: boolean = false;
   abstract run(
-    parent: ViewApi<E>,
-    destroyed: Future<boolean>
-  ): { explicit: O; output: A };
+    parent: DomApi<any>,
+    destroyed: Future<boolean>,
+    time: Time
+  ): Out<A, O>;
   // Definitions below are inserted by Jabz
-  flatten: <B>() => Component<E, O, B>;
-  map: <B>(f: (a: A) => B) => Component<E, O, B>;
-  mapTo: <B>(b: B) => Component<E, O, B>;
-  ap: <B, P>(a: Component<E, P, (a: A) => B>) => Component<E, O, B>;
-  lift: (f: Function, ...ms: any[]) => Component<E, O, any>;
+  flatten: <B, P>(this: Component<A, Component<B, P>>) => Component<A, P>;
+  map: <P>(f: (a: O) => P) => Component<A, P>;
+  mapTo: <P>(b: P) => Component<A, P>;
+  ap: <P>(a: Component<A, (o: O) => P>) => Component<A, P>;
+  lift: (f: Function, ...ms: any[]) => Component<A, any>;
 }
 
-class OfComponent<A> extends Component<any, {}, A> {
-  constructor(private value: A) {
+class OfComponent<O> extends Component<{}, O> {
+  constructor(private readonly o: O) {
     super();
   }
-  run(_1: ViewApi<any>, _2: Future<boolean>): { explicit: {}; output: A } {
-    return { explicit: {}, output: this.value };
+  run(_1: DomApi, _2: Future<boolean>): Out<{}, O> {
+    return { output: this.o, available: {} };
   }
 }
 
-class PerformComponent<A> extends Component<any, {}, A> {
-  constructor(private cb: () => A) {
+class PerformComponent<O> extends Component<{}, O> {
+  constructor(private cb: () => O) {
     super();
   }
-  run(_1: ViewApi<any>, _2: Future<boolean>): { explicit: {}; output: A } {
-    return { explicit: {}, output: this.cb() };
+  run(_1: DomApi, _2: Future<boolean>): Out<{}, O> {
+    return { available: {}, output: this.cb() };
   }
 }
 
@@ -107,46 +116,55 @@ class PerformComponent<A> extends Component<any, {}, A> {
  * Takes a callback, potentially with side-effects. The callback is invoked when
  * the component is run and the return value becomes the components output.
  */
-export function performComponent<A>(callback: () => A) {
+export function performComponent<O>(callback: () => O): Component<{}, O> {
   return new PerformComponent(callback);
 }
 
-export function liftNow<A>(now: Now<A>) {
+export function liftNow<A>(now: Now<A>): Component<{}, A> {
   return performComponent(() => runNow(now));
 }
 
-class HandleOutput<E, O, A, P> extends Component<E, P, A> {
+class HandleOutput<A, O, B, P> extends Component<B, P> {
   constructor(
-    private readonly handler: (explicit: O, output: A) => P,
-    private readonly c: Component<E, O, A>
+    private readonly handler: (
+      available: A,
+      output: O
+    ) => { available: B; output: P },
+    private readonly c: Component<A, O>
   ) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<P, A> {
-    const { explicit, output } = this.c.run(parent, destroyed);
-    const newExplicit = this.handler(explicit, output);
-    return { explicit: newExplicit, output };
+  run(parent: DomApi, destroyed: Future<boolean>, t: Time): Out<B, P> {
+    const { available, output } = this.c.run(parent, destroyed, t);
+    return this.handler(available, output);
   }
 }
+
+/**
+ * This type is sometimes useful to trick TypeScript into evaulating types
+ * that it would otherwise not evaluating. This can make some types
+ * significantly more readable.
+ */
+type Id<T extends object> = {} & { [P in keyof T]: T[P] };
 
 export type Remap<
   A extends Record<any, any>,
   B extends Record<any, keyof A>
-> = { [K in keyof B]: A[B[K]] };
+> = Id<{ [K in keyof B]: A[B[K]] }>;
 
-export function output<E, A, O, P>(
+export function use<A, O, P>(
   f: (a: A) => P,
-  c: Component<E, O, A>
-): Component<E, O & P, A>;
-export function output<E, A, O, B extends Record<string, keyof A>>(
+  c: Component<A, O>
+): Component<A, O & P>;
+export function use<A, O, B extends Record<string, keyof A>>(
   remaps: B,
-  c: Component<E, O, A>
-): Component<E, O & Remap<A, B>, A>;
-export function output<E, A>(
+  c: Component<A, O>
+): Component<A, O & Remap<A, B>>;
+export function use<A>(
   remaps: any,
-  component: Component<E, any, A>
-): Component<E, any, A> {
-  return component.output(remaps);
+  component: Component<any, A>
+): Component<any, A> {
+  return component.use(remaps);
 }
 
 /**
@@ -155,33 +173,41 @@ export function output<E, A>(
  */
 export const emptyComponent = Component.of({});
 
-class FlatMapComponent<E, O, A, B> extends Component<E, O, B> {
+class FlatMapComponent<A, O, B, P> extends Component<A, P> {
   constructor(
-    private component: Component<E, O, A>,
-    private f: (a: A) => Component<E, O, B>
+    private readonly component: Component<A, O>,
+    private readonly f: (o: O) => Component<B, P>
   ) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<O, B> {
-    const { explicit, output: outputFirst } = this.component.run(
+  run(parent: DomApi, destroyed: Future<boolean>, t: Time): Out<A, P> {
+    const { available, output: outputFirst } = this.component.run(
       parent,
-      destroyed
+      destroyed,
+      t
     );
-    const { explicit: _discarded, output } = this.f(outputFirst).run(
-      parent,
-      destroyed
-    );
-    return { explicit, output };
+    const { output } = this.f(outputFirst).run(parent, destroyed, t);
+    return { available, output };
   }
 }
 
-export function isComponent(c: any): c is Component<any, any, any> {
+export function isComponent(c: any): c is Component<any, any> {
   return c instanceof Component;
 }
 
+type Reactive = Behavior<any> | Stream<any> | Future<any>;
+
 export interface ReactivesObject {
-  [a: string]: Behavior<any> | Stream<any> | Future<any>;
+  [a: string]: Reactive;
 }
+
+/**
+ * Removes all properties from a type except those that are either
+ * streams, behaviors, or futures.
+ */
+type OnlyReactives<R> = {
+  [K in keyof R]: R[K] extends Reactive ? R[K] : never;
+};
 
 const placeholderProxyHandler = {
   get: function(target: any, name: string): Behavior<any> | Stream<any> {
@@ -192,65 +218,99 @@ const placeholderProxyHandler = {
   }
 };
 
-class LoopComponent<E, O, A> extends Component<E, O, A> {
-  constructor(private f: (a: A) => Child, private placeholderNames?: string[]) {
+type Result<R, O> = { available: R; component: Child<O> };
+
+function isLoopResult(r: any): r is Result<any, any> {
+  return typeof r === "object" && "available" in r && "component" in r;
+}
+
+class LoopComponent<L, O> extends Component<O, {}> {
+  constructor(
+    private f: (
+      o: L,
+      start: <A>(n: Now<A>) => A
+    ) => Child<L> | Now<Child<L>> | Result<O, L> | Now<Result<O, L>>,
+    private placeholderNames?: (keyof L)[]
+  ) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<O, A> {
+  run(parent: DomApi, destroyed: Future<boolean>, t: Time): Out<O, {}> {
     let placeholderObject: any = { destroyed };
-    if (supportsProxy) {
+    if (this.placeholderNames !== undefined) {
+      for (const name of this.placeholderNames) {
+        placeholderObject[name] = placeholder();
+      }
+    } else if (supportsProxy) {
       placeholderObject = new Proxy(placeholderObject, placeholderProxyHandler);
     } else {
-      if (this.placeholderNames !== undefined) {
-        for (const name of this.placeholderNames) {
-          placeholderObject[name] = placeholder();
-        }
+      throw new Error(
+        "component called with no list of names and proxies are not supported."
+      );
+    }
+    const res = instant(start => this.f(placeholderObject, start)).run(t);
+    const result = Now.is(res) ? res.run(t) : res;
+    const { available, component } = isLoopResult(result)
+      ? result
+      : { available: {} as O, component: result };
+    const { output: looped } = toComponent(component).run(parent, destroyed, t);
+    const needed = Object.keys(placeholderObject);
+    for (const name of needed) {
+      if (name === "destroyed") {
+        continue;
       }
+      if (looped[name] === undefined) {
+        throw new Error(`The property ${name} is missing.`);
+      }
+      placeholderObject[name].replaceWith(looped[name], t);
     }
-    const { explicit, output } = toComponent(this.f(placeholderObject)).run(
-      parent,
-      destroyed
-    );
-    const returned: (keyof A)[] = <any>Object.keys(output);
-    for (const name of returned) {
-      placeholderObject[name].replaceWith(output[name]);
-    }
-    return { explicit, output };
+    return { available, output: {} };
   }
 }
-export function loop<E, O, A extends ReactivesObject>(
-  f: (a: A) => Child<O>,
-  placeholderNames?: string[]
-): Component<E, O, A> {
-  const f2 = isGeneratorFunction(f) ? fgo<A>(f) : f;
-  return new LoopComponent<E, O, A>(f2, placeholderNames);
+
+export function component<L extends ReactivesObject>(
+  f: (l: L, start: <A>(n: Now<A>) => A) => Child<L> | Now<Child<L>>,
+  placeholderNames?: (keyof L)[]
+): Component<{}, {}>;
+export function component<L extends ReactivesObject, O>(
+  f: (l: L, start: <A>(n: Now<A>) => A) => Result<O, L> | Now<Result<O, L>>,
+  placeholderNames?: (keyof L)[]
+): Component<O, {}>;
+export function component<L, O extends ReactivesObject>(
+  f: (
+    l: L,
+    start: <A>(n: Now<A>) => A
+  ) => Child<L> | Now<Child<L>> | Result<O, L> | Now<Result<O, L>>,
+  placeholderNames?: (keyof L)[]
+): Component<O, {}> {
+  return new LoopComponent<L, O>(f, placeholderNames);
 }
 
 class MergeComponent<
-  E,
-  O extends object,
   A,
-  P extends object,
-  B
-> extends Component<E, O & P, O & P> {
-  constructor(private c1: Component<E, O, A>, private c2: Component<E, P, B>) {
+  O extends object,
+  B,
+  P extends object
+> extends Component<{}, O & P> {
+  constructor(private c1: Component<A, O>, private c2: Component<B, P>) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<O & P, O & P> {
-    const { explicit: explicit1 } = this.c1.run(parent, destroyed);
-    const { explicit: explicit2 } = this.c2.run(parent, destroyed);
-    const merged = Object.assign({}, explicit1, explicit2);
-    return { explicit: merged, output: merged };
+  run(parent: DomApi, destroyed: Future<boolean>, t: Time): Out<{}, O & P> {
+    const res1 = this.c1.run(parent, destroyed, t);
+    const res2 = this.c2.run(parent, destroyed, t);
+    return {
+      available: {},
+      output: mergeObj(mergeObj({}, res2.output), res1.output)
+    };
   }
 }
 
 /**
- * Merges two components. Their explicit output is combined.
+ * Merges two components. Their selected output is combined.
  */
-export function merge<E, O extends object, A, P extends object, B>(
-  c1: Component<E, O, A>,
-  c2: Component<E, P, B>
-): Component<E, O & P, O & P> {
+export function merge<O extends object, A, P extends object, B>(
+  c1: Component<A, O>,
+  c2: Component<B, P>
+): Component<{}, O & P> {
   return new MergeComponent(c1, c2);
 }
 
@@ -276,21 +336,20 @@ function addErrorHandler(modelName: string, viewName: string, obj: any): any {
   });
 }
 
-class ModelViewComponent<E, M extends ReactivesObject, V> extends Component<
-  E,
-  {},
-  M
+class ModelViewComponent<M extends Record<string, any>, V> extends Component<
+  M,
+  {}
 > {
   constructor(
     private args: any[],
     private model: (...as: any[]) => Now<M>,
-    private view: (...as: any[]) => Child<V>,
+    private viewF: (...as: any[]) => Child<V>,
     private placeholderNames?: string[]
   ) {
     super();
   }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<{}, M> {
-    const { view, model, args } = this;
+  run(parent: DomApi, destroyed: Future<boolean>, t: Time): Out<M, {}> {
+    const { viewF, model, args } = this;
     let placeholders: any;
     if (supportsProxy) {
       placeholders = new Proxy({}, placeholderProxyHandler);
@@ -302,12 +361,12 @@ class ModelViewComponent<E, M extends ReactivesObject, V> extends Component<
         }
       }
     }
-    const { explicit: viewOutput } = toComponent(
-      view(placeholders, ...args)
-    ).run(parent, destroyed);
+    const { output: viewOutput } = toComponent(
+      viewF(placeholders, ...args)
+    ).run(parent, destroyed, t);
     const helpfulViewOutput = addErrorHandler(
       model.name,
-      view.name,
+      viewF.name,
       Object.assign(viewOutput, { destroyed })
     );
     const behaviors = runNow(model(helpfulViewOutput, ...args));
@@ -315,45 +374,45 @@ class ModelViewComponent<E, M extends ReactivesObject, V> extends Component<
     for (const name of Object.keys(behaviors)) {
       placeholders[name].replaceWith(behaviors[name]);
     }
-    return { explicit: {}, output: behaviors };
+    return { available: behaviors, output: {} };
   }
 }
 
-export type ModelReturn<M> = Now<M> | Iterator<any>;
-export type Model<V, M> = (v: V) => ModelReturn<M>;
-export type Model1<V, M, A> = (v: V, a: A) => ModelReturn<M>;
-export type View<M, V> = (m: M) => Child<V>;
-export type View1<M, V, A> = (m: M, a: A) => Child<V>;
+export type Model<V, M> = (v: V) => Now<M>;
+export type Model1<V, M, A> = (v: V, a: A) => Now<M>;
+export type View<M, V> = (m: OnlyReactives<M>) => Child<V>;
+export type View1<M, V, A> = (m: OnlyReactives<M>, a: A) => Child<V>;
 
-export function modelView<E, M extends ReactivesObject, V>(
+export function modelView<M extends Record<string, any>, V>(
   model: Model<V, M>,
   view: View<M, V>,
   toViewReactiveNames?: string[]
-): () => Component<E, {}, M>;
-export function modelView<E, M extends ReactivesObject, V, A>(
+): () => Component<M, {}>;
+export function modelView<M extends Record<string, any>, V, A>(
   model: Model1<V, M, A>,
   view: View1<M, V, A>,
   toViewReactiveNames?: string[]
-): (a: A) => Component<E, {}, M>;
-export function modelView<E, M extends ReactivesObject, V>(
+): (a: A) => Component<M, {}>;
+export function modelView<M extends Record<string, any>, V>(
   model: any,
   view: any,
   toViewReactiveNames?: string[]
-): (...args: any[]) => Component<E, {}, M> {
-  const m: any = isGeneratorFunction(model) ? fgo(model) : model;
+): (...args: any[]) => Component<M, {}> {
   return (...args: any[]) =>
-    new ModelViewComponent<E, M, V>(args, m, view, toViewReactiveNames);
+    new ModelViewComponent<M, V>(args, model, view, toViewReactiveNames);
 }
 
-export type ChildElement<E, O = any> =
-  | Component<E, O, any>
-  | Behavior<Component<E, any, any>>
+export function view<O>(c: Component<any, O>): Component<O, {}> {
+  return new HandleOutput((_, o) => ({ available: o, output: {} }), c);
+}
+
+// Child element
+export type CE<O = any> =
+  | Component<any, O>
+  | Behavior<Component<any, any>>
   | Showable
   | Behavior<Showable>
   | ChildList;
-
-// Child element short alias
-type CE<E = any, O = any> = ChildElement<E, O>;
 
 // Union of the types that can be used as a child. A child is either a
 // component or something that can be converted into a component. This
@@ -380,32 +439,25 @@ export type Child<O = any> =
 export interface ChildList extends Array<CE> {}
 
 /**
- * Takes a component type and returns the explicit output of the component.
+ * Takes a component type and returns the selected output of the component.
  */
-export type ComponentExplicitOutput<C> = C extends Component<any, infer O, any>
+export type ComponentSelectedOutput<C> = C extends Component<any, infer O>
   ? O
   : never;
 
 /**
  * Takes a component type and returns the output of the component.
  */
-export type ComponentOutput<C> = C extends Component<any, any, infer A>
-  ? A
-  : never;
+export type ComponentOutput<C> = C extends Component<any, infer A> ? A : never;
 
-export type ComponentElementType<C> = C extends Component<infer E, any, any>
-  ? E
-  : never;
-
-export type ChildExplicitOutput<Ch extends Child> = ComponentExplicitOutput<
+export type ChildSelectedOutput<Ch extends Child> = ComponentSelectedOutput<
   ToComponent<Ch>
 >;
 
 // Merge component
 export type MC<C1 extends CE, C2 extends CE> = Component<
-  any,
-  ComponentExplicitOutput<TC<C1>> & ComponentExplicitOutput<TC<C2>>,
-  Merge<ComponentExplicitOutput<TC<C1>> & ComponentExplicitOutput<TC<C2>>>
+  ComponentSelectedOutput<TC<C1>> & ComponentSelectedOutput<TC<C2>>,
+  Merge<ComponentSelectedOutput<TC<C1>> & ComponentSelectedOutput<TC<C2>>>
 >;
 
 // prettier-ignore
@@ -423,57 +475,30 @@ export type ArrayToComponent<A extends Array<Child>> =
   A extends [CE, CE, CE, CE, CE, CE, CE, CE, CE, CE, CE] ? TC<MC<A[0], MC<A[1], MC<A[2], MC<A[3], MC<A[4], MC<A[5], MC<A[6], MC<A[7], MC<A[8], MC<A[9], A[10]>>>>>>>>>>> :
   A extends [CE, CE, CE, CE, CE, CE, CE, CE, CE, CE, CE, CE] ? TC<MC<A[0], MC<A[1], MC<A[2], MC<A[3], MC<A[4], MC<A[5], MC<A[6], MC<A[7], MC<A[8], MC<A[9], MC<A[10], A[11]>>>>>>>>>>>> :
   A extends [CE, CE, CE, CE, CE, CE, CE, CE, CE, CE, CE, CE, CE] ? TC<MC<A[0], MC<A[1], MC<A[2], MC<A[3], MC<A[4], MC<A[5], MC<A[6], MC<A[7], MC<A[8], MC<A[9], MC<A[10], MC<A[11], A[12]>>>>>>>>>>>>> :
-  Component<any, any, any>;
+  Component<any, any>;
 
-export type TC<A> = A extends Component<any, infer O, any>
-  ? Component<any, O, O>
+export type TC<A> = A extends Component<any, infer O>
+  ? Component<{}, O>
   : A extends Showable
-  ? Component<any, {}, {}>
+  ? Component<{}, {}>
   : A extends Behavior<Showable>
-  ? Component<any, {}, {}>
-  : Component<any, any, any>;
+  ? Component<{}, {}>
+  : Component<any, any>;
 
 export type ToComponent<A> = A extends Child[] ? ArrayToComponent<A> : TC<A>;
 
 export function isChild(a: any): a is Child {
-  return (
-    isComponent(a) ||
-    isGeneratorFunction(a) ||
-    isBehavior(a) ||
-    isShowable(a) ||
-    Array.isArray(a)
-  );
+  return isComponent(a) || isBehavior(a) || isShowable(a) || Array.isArray(a);
 }
 
-class ListComponent<E> extends Component<E, any, any> {
-  components: Component<E, any, any>[];
-  constructor(children: Child[]) {
-    super();
-    this.components = [];
-    for (const child of children) {
-      const component = toComponent(child);
-      this.components.push(component);
-    }
-  }
-  run(parent: ViewApi<E>, destroyed: Future<boolean>): Out<any, any> {
-    const output: Record<string, any> = {};
-    for (let i = 0; i < this.components.length; ++i) {
-      const component = this.components[i];
-      const { explicit } = component.run(parent, destroyed);
-      Object.assign(output, explicit);
-    }
-    return { explicit: output, output };
-  }
-}
-
-class TextComponent extends Component<Showable, {}, {}> {
+class TextComponent extends Component<{}, {}> {
   constructor(private text: Showable) {
     super();
   }
-  run(api: ViewApi<Showable>, destroyed: Future<boolean>) {
+  run(api: DomApi<Showable>, destroyed: Future<boolean>) {
     api.appendChild(this.text);
     return {
-      explicit: {},
+      available: {},
       output: {}
     };
   }
@@ -483,6 +508,27 @@ export function text(show: Showable) {
   return new TextComponent(show);
 }
 
+class ListComponent extends Component<any, any> {
+  components: Component<any, any>[];
+  constructor(children: Child[]) {
+    super();
+    this.components = [];
+    for (const child of children) {
+      const component = toComponent(child);
+      this.components.push(component);
+    }
+  }
+  run(parent: DomApi, destroyed: Future<boolean>, t: Time): Out<any, any> {
+    let output: Record<string, any> = {};
+    for (let i = 0; i < this.components.length; ++i) {
+      const component = this.components[i];
+      const res = component.run(parent, destroyed, t);
+      mergeObj(output, res.output);
+    }
+    return { available: output, output };
+  }
+}
+
 export function toComponent<A extends Child>(child: A): ToComponent<A> {
   if (isComponent(child)) {
     return child as any;
@@ -490,64 +536,62 @@ export function toComponent<A extends Child>(child: A): ToComponent<A> {
     return text(child) as any;
   } else if (isBehavior(child)) {
     return dynamic(child).mapTo({}) as any;
-  } else if (isGeneratorFunction(child)) {
-    return go(child);
   } else if (Array.isArray(child)) {
     return new ListComponent(child) as any;
   } else {
-    throw new Error("Child could not be converted to component: " + child);
+    throw new Error(
+      "Child could not be converted to component " + typeof child
+    );
   }
 }
 
-class DynamicComponent<E, O> extends Component<E, {}, Behavior<O>> {
+class DynamicComponent<O> extends Component<Behavior<O>, {}> {
   constructor(private behavior: Behavior<Child<O>>) {
     super();
   }
   run(
-    parent: ViewApi<E>,
-    dynamicDestroyed: Future<boolean>
-  ): Out<{}, Behavior<O>> {
+    parent: DomApi<any>,
+    dynamicDestroyed: Future<boolean>,
+    t: Time
+  ): Out<Behavior<O>, {}> {
     let destroyPrevious: Future<boolean>;
     const parentWrap = new FixedDomPosition(parent, dynamicDestroyed);
 
-    const output = this.behavior.map(child => {
+    const available = this.behavior.map(child => {
       if (destroyPrevious !== undefined) {
         destroyPrevious.resolve(true);
       }
       destroyPrevious = sinkFuture<boolean>();
-      const { explicit } = toComponent(child).run(
+      const { output } = toComponent(child).run(
         parentWrap,
-        destroyPrevious.combine(dynamicDestroyed)
+        destroyPrevious.combine(dynamicDestroyed),
+        t
       );
-      return explicit;
+      return output;
     });
     // To activate behavior
-    viewObserve(id, output);
+    viewObserve(id, available, t);
 
-    return { explicit: {}, output };
+    return { available, output: {} };
   }
 }
 
-export function dynamic<E, O>(
-  behavior: Behavior<Component<E, O, any>>
-): Component<E, {}, Behavior<O>>;
-export function dynamic(behavior: Behavior<Child>): Component<any, {}, {}>;
-export function dynamic<E, O>(
+export function dynamic<O>(
+  behavior: Behavior<Component<any, O>>
+): Component<Behavior<O>, {}>;
+export function dynamic<O>(
   behavior: Behavior<Child<O>>
-): Component<any, {}, Behavior<O>> {
-  return new DynamicComponent<E, O>(behavior);
+): Component<Behavior<O>, {}>;
+export function dynamic<O>(
+  behavior: Behavior<Child<O>>
+): Component<Behavior<O>, {}> {
+  return new DynamicComponent(behavior);
 }
 
-type ComponentStuff<E, A> = {
-  out: A;
-  destroy: Future<boolean>;
-  elms: E[];
-};
-
-class DomRecorder<A> implements ViewApi<A> {
+class DomRecorder<A> implements DomApi<A> {
   elms: A[] = [];
   parent: any;
-  constructor(private api: ViewApi<A>) {
+  constructor(private api: DomApi<A>) {
     this.parent = api.parent;
   }
   appendChild(child: A): void {
@@ -566,46 +610,54 @@ class DomRecorder<A> implements ViewApi<A> {
   }
 }
 
-class ComponentList<E, A, O> extends Component<E, {}, Behavior<O[]>> {
+type ComponentInfo<O> = {
+  output: O;
+  destroy: Future<boolean>;
+  elms: DomApi[];
+};
+
+class ComponentList<A, O> extends Component<Behavior<O[]>, {}> {
   constructor(
-    private compFn: (a: A) => Component<E, O, any>,
+    private compFn: (a: A) => Component<O, any>,
     private listB: Behavior<A[]>,
     private getKey: (a: A, index: number) => number | string
   ) {
     super();
   }
   run(
-    parent: ViewApi<E>,
-    listDestroyed: Future<boolean>
-  ): Out<{}, Behavior<O[]>> {
+    parent: DomApi<any>,
+    listDestroyed: Future<boolean>,
+    t: Time
+  ): Out<Behavior<O[]>, {}> {
     // The reordering code below is neither pretty nor fast. But it at
     // least avoids recreating elements and is quite simple.
     const resultB = sinkBehavior<O[]>([]);
-    let keyToElm: Record<string, ComponentStuff<E, O>> = {};
+    let keyToElm: Record<string, ComponentInfo<O>> = {};
     const parentWrap = new FixedDomPosition(parent, listDestroyed);
     this.listB.subscribe(newAs => {
-      const newKeyToElm: Record<string, ComponentStuff<E, O>> = {};
+      const newKeyToElm: Record<string, ComponentInfo<O>> = {};
       const newArray: O[] = [];
       // Re-add existing elements and new elements
       for (let i = 0; i < newAs.length; i++) {
         const a = newAs[i];
         const key = this.getKey(a, i);
-        let stuff = keyToElm[key];
-        if (stuff === undefined) {
+        let info = keyToElm[key];
+        if (info === undefined) {
           const destroy = sinkFuture<boolean>();
-          const recorder = new DomRecorder(parentWrap);
-          const out = this.compFn(a).run(
+          const recorder = new DomRecorder<any>(parentWrap);
+          const { output } = this.compFn(a).run(
             recorder,
-            destroy.combine(listDestroyed)
+            destroy.combine(listDestroyed),
+            t
           );
-          stuff = { elms: recorder.elms, out: out.explicit, destroy };
+          info = { elms: recorder.elms, output, destroy };
         } else {
-          for (const elm of stuff.elms) {
+          for (const elm of info.elms) {
             parentWrap.appendChild(elm);
           }
         }
-        newArray.push(stuff.out);
-        newKeyToElm[key] = stuff;
+        newArray.push(info.output);
+        newKeyToElm[key] = info;
       }
       // Remove elements that are no longer present
       const oldKeys = Object.keys(keyToElm);
@@ -617,58 +669,64 @@ class ComponentList<E, A, O> extends Component<E, {}, Behavior<O[]>> {
       keyToElm = newKeyToElm;
       resultB.push(newArray);
     });
-    return { explicit: {}, output: resultB };
+    return { available: resultB, output: {} };
   }
 }
 
-export function list<E, A extends string | number, O>(
-  componentCreator: (a: A) => Component<E, O, any>,
+export function list<A extends string | number, O>(
+  componentCreator: (a: A) => Component<any, O>,
   listB: Behavior<A[]>,
   getKey?: (a: A, index: number) => number | string
-): Component<E, {}, Behavior<O[]>>;
-export function list<E, A, O>(
-  componentCreator: (a: A) => Component<E, O, any>,
+): Component<Behavior<O[]>, {}>;
+export function list<A, O>(
+  componentCreator: (a: A) => Component<any, O>,
   listB: Behavior<A[]>,
   getKey: (a: A, index: number) => number | string
-): Component<E, {}, Behavior<O[]>>;
-export function list<E, A, O>(
-  componentCreator: (a: A) => Component<E, O, any>,
+): Component<Behavior<O[]>, {}>;
+export function list<A, O>(
+  componentCreator: (a: A) => Component<any, O>,
   listB: Behavior<A[]>,
   getKey: (a: A, index: number) => number | string = id as any
-): Component<E, {}, Behavior<O[]>> {
+): Component<Behavior<O[]>, {}> {
   return new ComponentList(componentCreator, listB, getKey);
 }
+
+/**
+ * Takes a component type and returns the explicit output of the component.
+ */
+export type ComponentExplicitOutput<C> = C extends Component<any, infer A>
+  ? A
+  : never;
+
+export type ChildExplicitOutput<Ch extends Child> = ComponentExplicitOutput<
+  ToComponent<Ch>
+>;
 
 export type Wrapped<E, P, O> = (undefined extends P
   ? {
       // Optional props
       // Only props
-      (props?: P): Component<E, {}, O>;
+      (props?: P): Component<O, {}>;
       // Only child
       <Ch extends Child>(child: Ch): Component<
-        E,
-        ChildExplicitOutput<Ch>,
-        ChildExplicitOutput<Ch> & O
+        ChildExplicitOutput<Ch> & O,
+        ChildExplicitOutput<Ch>
       >;
     }
   : {
       // Required props
       // Only props
-      (props: P): Component<E, {}, O>;
+      (props: P): Component<{}, O>;
     }) & {
   // Both props and child
   <Ch extends Child>(props: P, child: Ch): Component<
-    E,
     ChildExplicitOutput<Ch>,
     ChildExplicitOutput<Ch> & O
   >;
 };
 
 export function wrapper<E, P, O>(
-  fn: (
-    props: P,
-    child: Component<E, any, any> | undefined
-  ) => Component<E, any, O>
+  fn: (props: P, child: Component<any, any> | undefined) => Component<any, O>
 ): Wrapped<E, P, O> {
   function wrappedComponent(
     newPropsOrChild: P | Child,

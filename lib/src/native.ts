@@ -2,8 +2,8 @@ import { Page } from "tns-core-modules/ui/page";
 import { View } from "tns-core-modules/ui/core/view";
 import { Frame } from "tns-core-modules/ui/frame";
 import { run } from "tns-core-modules/application";
-import { sinkFuture, Future } from "@funkia/hareactive";
-import { Component, ViewApi } from "./component";
+import { sinkFuture, Future, tick } from "@funkia/hareactive";
+import { Component, DomApi } from "./component";
 import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
 import { Label } from "tns-core-modules/ui/label/label";
 import { NativeViewApi } from "./ui-builder";
@@ -20,25 +20,26 @@ export function runComponent(component: any) {
   });
 }
 
-export function testComponent<E extends View, O, A>(
-  component: Component<E, O, A>
+export function testComponent<O, A>(
+  component: Component<O, A>,
+  time = tick()
 ): {
-  out: A;
+  output: A;
   page: Page;
-  explicit: O;
+  available: O;
   destroy: (toplevel: boolean) => void;
 } {
   const page = new Page();
   const destroyed = sinkFuture<boolean>();
-  const { output: out, explicit } = component.run(page as any, destroyed);
+  const { output, available } = component.run(page as any, destroyed, time);
   const destroy = destroyed.resolve.bind(destroyed);
-  return { out, explicit, page, destroy };
+  return { output, available, page, destroy };
 }
 
-export class FixedDomPosition<A> implements ViewApi<A> {
+export class FixedDomPosition<A> implements DomApi<A> {
   fixpoint: any;
   parent;
-  constructor(public api: ViewApi<A>, destroy: Future<boolean>) {
+  constructor(public api: DomApi<A>, destroy: Future<boolean>) {
     if (!(api.parent instanceof LayoutBase)) {
       return;
     }

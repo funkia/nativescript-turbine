@@ -3,7 +3,8 @@ import {
   Stream,
   Behavior,
   observe,
-  stepperFrom
+  stepperFrom,
+  Time
 } from "@funkia/hareactive";
 import {
   Observable,
@@ -64,6 +65,10 @@ function pullOnFrame(pull: (t?: number) => void): () => void {
   return () => fps.stop();
 }
 
-export function viewObserve<A>(update: (a: A) => void, behavior: Behavior<A>) {
-  observe(update, pullOnFrame, behavior);
+export function viewObserve<A>(
+  update: (a: A) => void,
+  behavior: Behavior<A>,
+  time?: Time
+) {
+  observe(update, pullOnFrame, behavior, time);
 }
