@@ -702,32 +702,29 @@ export type ChildExplicitOutput<Ch extends Child> = ComponentExplicitOutput<
   ToComponent<Ch>
 >;
 
-export type Wrapped<E, P, O> = (undefined extends P
+export type Wrapped<P, A> = (undefined extends P
   ? {
       // Optional props
       // Only props
-      (props?: P): Component<O, {}>;
+      (props?: P): Component<A, {}>;
       // Only child
-      <Ch extends Child>(child: Ch): Component<
-        ChildExplicitOutput<Ch> & O,
-        ChildExplicitOutput<Ch>
-      >;
+      <Ch extends Child>(child: Ch): Component<A, ChildExplicitOutput<Ch>>;
     }
   : {
       // Required props
       // Only props
-      (props: P): Component<{}, O>;
+      (props: P): Component<A, {}>;
     }) & {
   // Both props and child
   <Ch extends Child>(props: P, child: Ch): Component<
-    ChildExplicitOutput<Ch>,
-    ChildExplicitOutput<Ch> & O
+    A,
+    ChildExplicitOutput<Ch>
   >;
 };
 
-export function wrapper<E, P, O>(
-  fn: (props: P, child: Component<any, any> | undefined) => Component<any, O>
-): Wrapped<E, P, O> {
+export function wrapper<P, A>(
+  fn: (props: P, child: Component<any, any> | undefined) => Component<A, {}>
+): Wrapped<P, A> {
   function wrappedComponent(
     newPropsOrChild: P | Child,
     childOrUndefined: Child | undefined

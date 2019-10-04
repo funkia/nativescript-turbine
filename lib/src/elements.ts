@@ -66,7 +66,7 @@ export const textView = uiViewElement(TextView, {
 export const button = uiViewElement(Button, {
   streams: {
     tap: {
-      event: "tap"
+      event: Button.tapEvent
     }
   }
 });

@@ -199,11 +199,16 @@ export type InitialOutput<
     : {}) &
   DefaultOutput;
 
-class UIViewElement<E extends View, O, P, A> extends Component<O, A & P> {
+class UIViewElement<
+  E extends View,
+  P extends AttrProperties<E>,
+  O,
+  CO
+> extends Component<InitialOutput<E, P>, O & CO> {
   constructor(
     private viewC: ConstructorOf<E>,
-    private props: AttrProperties<E>,
-    private child?: Component<any, P>
+    private props: P,
+    private child?: Component<any, CO>
   ) {
     super();
   }
@@ -211,7 +216,7 @@ class UIViewElement<E extends View, O, P, A> extends Component<O, A & P> {
     parent: DomApi<E>,
     destroyed: Future<boolean>,
     time: Time
-  ): Out<O, A & P> {
+  ): Out<InitialOutput<E, P>, O & CO> {
     const view = new this.viewC();
 
     if ("style" in this.props) {
@@ -298,7 +303,7 @@ export function uiViewElement<E extends View, P extends AttrProperties<E>>(
   viewC: ConstructorOf<E>,
   defaultProps?: P
 ) {
-  return wrapper<E, AttrProperties<E> | undefined, InitialOutput<E, P>>(
+  return wrapper<AttrProperties<E> | undefined, InitialOutput<E, P>>(
     (props, child: Child) =>
       <any>new UIViewElement(viewC, mergeProps(defaultProps, props), <any>child)
   );
