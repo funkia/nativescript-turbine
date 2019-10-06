@@ -1,10 +1,12 @@
 import { Page } from "tns-core-modules/ui/page";
-import { View } from "tns-core-modules/ui/core/view";
-import { Frame } from "tns-core-modules/ui/frame";
+import { Frame, topmost } from "tns-core-modules/ui/frame";
 import { run } from "tns-core-modules/application";
-import { sinkFuture, Future, tick } from "@funkia/hareactive";
+import { sinkFuture, Future, tick, Now, Time } from "@funkia/hareactive";
 import { Component, DomApi } from "./component";
-import { LayoutBase } from "tns-core-modules/ui/layouts/layout-base";
+import {
+  LayoutBase,
+  ShowModalOptions
+} from "tns-core-modules/ui/layouts/layout-base";
 import { Label } from "tns-core-modules/ui/label/label";
 import { NativeViewApi } from "./ui-builder";
 
@@ -63,4 +65,47 @@ export class FixedDomPosition<A> implements DomApi<A> {
   removeChild(c: A): void {
     this.api.removeChild(c);
   }
+}
+
+type ModalOptions = Partial<Omit<ShowModalOptions, "closeCallback">> & {
+  destroy?: Future<boolean>;
+};
+export class ShowModalNow<A extends object> extends Now<
+  A & { close: Future<boolean> }
+> {
+  constructor(
+    private component: Component<any, A>,
+    private opts: ModalOptions
+  ) {
+    super();
+  }
+  run(t: Time) {
+    const p = new Page();
+    const closeSink = sinkFuture<boolean>();
+    const close =
+      "destroy" in this.opts ? closeSink.combine(this.opts.destroy) : closeSink;
+    if ("destroy" in this.opts) {
+      this.opts.destroy.subscribe(() => {
+        p.content.closeModal();
+      });
+    }
+    const { output } = this.component.run(new NativeViewApi(p), close, t);
+    setTimeout(() => {
+      topmost().showModal(p.content, {
+        closeCallback() {
+          closeSink.resolve(true);
+        },
+        context: undefined,
+        ...this.opts
+      });
+    }, 0);
+    return { ...output, close };
+  }
+}
+
+export function showModal<A extends object>(
+  component: Component<any, A>,
+  opts: ModalOptions = {}
+): Now<A & { close: Future<boolean> }> {
+  return new ShowModalNow(component, opts);
 }
