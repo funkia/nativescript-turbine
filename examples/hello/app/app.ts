@@ -1,4 +1,4 @@
-﻿import { runComponent, elements as E, component } from "nativescript-turbine";
+﻿import { runComponent, elements as E, component } from "../../../src";
 import * as H from "@funkia/hareactive";
 import { setCssFileName } from "tns-core-modules/application";
 import "./style.css";

@@ -271,7 +271,6 @@ class UIViewElement<
         return out;
       }, available);
     }
-
     // add ourself
     parent.appendChild(view);
 

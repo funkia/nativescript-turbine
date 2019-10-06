@@ -15,7 +15,6 @@
   "dependencies": {
     "@funkia/hareactive": "^0.4.0",
     "nativescript-theme-core": "~1.0.6",
-    "nativescript-turbine": "../../lib",
     "tns-core-modules": "~6.0.0"
   },
   "devDependencies": {
