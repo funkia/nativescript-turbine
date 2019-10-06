@@ -177,7 +177,7 @@ export class NativeViewApi<A extends View> implements DomApi<A> {
     if (this.parent instanceof LayoutBase) {
       this.parent.removeChild(child);
     } else if (this.parent instanceof ContentView) {
-      this.parent.content = null;
+      this.parent.content = undefined;
     } else if (this.parent instanceof Frame) {
       throw new Error("Not implemented yet");
     }

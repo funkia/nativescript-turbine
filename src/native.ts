@@ -1,7 +1,15 @@
 import { Page } from "tns-core-modules/ui/page";
 import { Frame, topmost } from "tns-core-modules/ui/frame";
 import { run } from "tns-core-modules/application";
-import { sinkFuture, Future, tick, Now, Time } from "@funkia/hareactive";
+import {
+  sinkFuture,
+  Future,
+  tick,
+  Now,
+  Time,
+  placeholder,
+  combine
+} from "@funkia/hareactive";
 import { Component, DomApi } from "./component";
 import {
   LayoutBase,
@@ -9,6 +17,7 @@ import {
 } from "tns-core-modules/ui/layouts/layout-base";
 import { Label } from "tns-core-modules/ui/label/label";
 import { NativeViewApi } from "./ui-builder";
+import { never } from "./utils";
 
 export function runComponent(component: any) {
   const destroyed = sinkFuture<boolean>();
@@ -40,7 +49,7 @@ export function testComponent<O, A>(
 
 export class FixedDomPosition<A> implements DomApi<A> {
   fixpoint: any;
-  parent;
+  parent: any;
   constructor(public api: DomApi<A>, destroy: Future<boolean>) {
     if (!(api.parent instanceof LayoutBase)) {
       return;
@@ -67,45 +76,53 @@ export class FixedDomPosition<A> implements DomApi<A> {
   }
 }
 
-type ModalOptions = Partial<Omit<ShowModalOptions, "closeCallback">> & {
-  destroy?: Future<boolean>;
+export type ModalOptions<B> = Partial<
+  Omit<ShowModalOptions, "closeCallback">
+> & {
+  closeModal?: Future<B>;
 };
-export class ShowModalNow<A extends object> extends Now<
-  A & { close: Future<boolean> }
+
+class ShowModalNow<A extends object, B> extends Now<
+  A & { closeModal: Future<B | undefined> }
 > {
   constructor(
-    private component: Component<any, A>,
-    private opts: ModalOptions
+    private component: Component<any, A & { closeModal?: Future<B> }>,
+    private opts: ModalOptions<B>
   ) {
     super();
   }
   run(t: Time) {
     const p = new Page();
-    const closeSink = sinkFuture<boolean>();
-    const close =
-      "destroy" in this.opts ? closeSink.combine(this.opts.destroy) : closeSink;
-    if ("destroy" in this.opts) {
-      this.opts.destroy.subscribe(() => {
-        p.content.closeModal();
-      });
-    }
-    const { output } = this.component.run(new NativeViewApi(p), close, t);
+    const nativeClose = sinkFuture<undefined>();
+    const closeFromOpts =
+      this.opts.closeModal !== undefined ? this.opts.closeModal : never;
+    const codeCloseP = placeholder<B>();
+    const closeModal = combine(nativeClose, codeCloseP).mapTo(true);
+    const { output } = this.component.run(new NativeViewApi(p), closeModal, t);
+    const closeFromOutput =
+      output.closeModal !== undefined ? output.closeModal : never;
+    const codeClose = closeFromOutput.combine(closeFromOpts);
+    codeCloseP.replaceWith(codeClose);
+
     setTimeout(() => {
       topmost().showModal(p.content, {
         closeCallback() {
-          closeSink.resolve(true);
+          nativeClose.resolve(undefined);
         },
         context: undefined,
         ...this.opts
       });
+      codeClose.subscribe(() => {
+        p.content.closeModal();
+      });
     }, 0);
-    return { ...output, close };
+    return { closeModal, ...output };
   }
 }
 
-export function showModal<A extends object>(
-  component: Component<any, A>,
-  opts: ModalOptions = {}
-): Now<A & { close: Future<boolean> }> {
+export function showModal<A extends object, B = any>(
+  component: Component<any, A & { closeModal?: Future<B> }>,
+  opts: ModalOptions<B> = {}
+): Now<A & { closeModal: Future<B | undefined> }> {
   return new ShowModalNow(component, opts);
 }

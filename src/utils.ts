@@ -1,4 +1,4 @@
-import { isBehavior, Behavior, isStream } from "@funkia/hareactive";
+import { isBehavior, Behavior, isStream, sinkFuture } from "@funkia/hareactive";
 
 export interface ConstructorOf<A> {
   new (): A;
@@ -135,3 +135,5 @@ export function copyRemaps(
 export function id<A>(a: A): A {
   return a;
 }
+
+export const never = sinkFuture<any>();
