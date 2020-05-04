@@ -1,5 +1,5 @@
 import { Page } from "tns-core-modules/ui/page";
-import { Frame, topmost } from "tns-core-modules/ui/frame";
+import { Frame } from "tns-core-modules/ui/frame";
 import { run } from "tns-core-modules/application";
 import {
   sinkFuture,
@@ -8,12 +8,12 @@ import {
   Now,
   Time,
   placeholder,
-  combine
+  combine,
 } from "@funkia/hareactive";
 import { Component, DomApi } from "./component";
 import {
   LayoutBase,
-  ShowModalOptions
+  ShowModalOptions,
 } from "tns-core-modules/ui/layouts/layout-base";
 import { Label } from "tns-core-modules/ui/label/label";
 import { NativeViewApi } from "./ui-builder";
@@ -27,7 +27,7 @@ export function runComponent(component: any) {
       const api = new NativeViewApi(frame);
       component.run(api, destroyed);
       return frame;
-    }
+    },
   });
 }
 
@@ -105,12 +105,12 @@ class ShowModalNow<A extends object, B> extends Now<
     codeCloseP.replaceWith(codeClose);
 
     setTimeout(() => {
-      topmost().showModal(p.content, {
+      Frame.topmost().showModal(p.content, {
         closeCallback() {
           nativeClose.resolve(undefined);
         },
         context: undefined,
-        ...this.opts
+        ...this.opts,
       });
       codeClose.subscribe(() => {
         p.content.closeModal();

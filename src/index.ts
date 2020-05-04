@@ -6,7 +6,9 @@ export {
   isComponent,
   toComponent,
   modelView,
-  component
+  view,
+  component,
+  dynamic
 } from "./component";
 import * as elements from "./elements";
 export { elements };
